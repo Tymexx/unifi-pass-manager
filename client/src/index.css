@@ -552,6 +552,8 @@ select option {
 }
 
 /* Utilities */
+.relative { position: relative; }
+
 .gradient-text {
   background: var(--primary-gradient);
   -webkit-background-clip: text;

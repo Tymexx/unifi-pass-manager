@@ -85,7 +85,7 @@ export default function KioskManager() {
                       value={url} 
                       readOnly 
                       className="font-mono text-muted"
-                      style={{ cursor: 'text' }}
+                      style={{ cursor: 'text', flex: 1, minWidth: 0 }}
                     />
                     <div className="btn-group">
                       <button onClick={() => handleCopy(url)} className="btn btn-secondary btn-icon" title="Copy URL">
