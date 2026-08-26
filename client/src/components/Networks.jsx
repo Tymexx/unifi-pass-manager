@@ -49,13 +49,10 @@ export default function Networks() {
   const confirmRemove = async () => {
     if (!networkToDelete) return;
     
-    // If it's an existing network saved in the DB, call the DELETE API
-    if (!networkToDelete.id.toString().startsWith('temp_')) {
-      try {
-        await axios.delete(`${API_BASE}/api/networks/${networkToDelete.id}`);
-      } catch (error) {
-        console.error('Failed to delete network from server', error);
-      }
+    try {
+      await axios.delete(`${API_BASE}/api/networks/${networkToDelete.id}`);
+    } catch (error) {
+      console.error('Failed to delete network from server', error);
     }
     
     setNetworks(networks.filter(n => n.id !== networkToDelete.id));
