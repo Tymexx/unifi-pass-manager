@@ -112,13 +112,16 @@ export default function Networks() {
       <div className="card-grid mt-2" style={{ gridTemplateColumns: '1fr' }}>
         {networks.map(net => (
           <div key={net.id} className="card relative">
-            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
-               <button onClick={() => handleRemove(net)} className="btn btn-danger btn-sm btn-icon">
+            <div className="flex-between mb-2" style={{ alignItems: 'center' }}>
+               <h3 className="card-title" style={{ margin: 0 }}>
+                 {net.name ? net.name : 'Network Settings'}
+               </h3>
+               <button onClick={() => handleRemove(net)} className="btn btn-danger btn-sm btn-icon" title="Delete Network">
                  <Trash2 size={16} />
                </button>
             </div>
             
-            <div className="form-grid mt-1">
+            <div className="form-grid">
               <div className="form-group">
                 <label>Name</label>
                 <input 
