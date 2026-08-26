@@ -40,8 +40,11 @@ export default function CalendarView() {
     fetchSettings();
   }, []);
 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState('month');
+
   // Map our backend events to react-big-calendar events
-  const mappedEvents = [];
+  const allEvents = [];
   events.forEach(evt => {
     const network = networks.find(n => n.id === evt.networkId);
     const networkName = network ? network.name : 'Unknown Room';
@@ -51,7 +54,7 @@ export default function CalendarView() {
       const [hour, minute] = evt.time.split(':');
       const start = new Date(year, month - 1, day, hour, minute);
       const end = new Date(year, month - 1, day, hour, parseInt(minute) + 15);
-      mappedEvents.push({
+      allEvents.push({
         id: evt.id,
         title: `${evt.title} (${networkName})`,
         start,
@@ -63,11 +66,11 @@ export default function CalendarView() {
       // This is a naive visual implementation just so they show up on the calendar grid
       const [hour, minute] = (evt.time || '00:00').split(':');
       
-      const today = moment().startOf('month');
-      const endOfMonth = moment().add(3, 'months').endOf('month'); // Plot out next 3 months visually
+      const startWindow = moment(currentDate).startOf('month').subtract(1, 'months');
+      const endWindow = moment(currentDate).endOf('month').add(1, 'months'); 
       
-      let current = today.clone();
-      while (current.isBefore(endOfMonth)) {
+      let current = startWindow.clone();
+      while (current.isBefore(endWindow)) {
         let match = false;
         
         if (evt.recurringType === 'daily') {
@@ -84,7 +87,7 @@ export default function CalendarView() {
           const start = current.clone().hour(hour).minute(minute).toDate();
           const end = current.clone().hour(hour).minute(parseInt(minute) + 15).toDate();
           if (start > new Date(2000, 1, 1)) { // sanity check
-            mappedEvents.push({
+            allEvents.push({
               id: evt.id,
               title: `🔄 ${evt.title} (${networkName})`,
               start,
@@ -98,8 +101,30 @@ export default function CalendarView() {
     }
   });
 
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState('month');
+  function groupEventsByDay(rawEvents) {
+    const grouped = {};
+    rawEvents.forEach(evt => {
+      const dateKey = moment(evt.start).format('YYYY-MM-DD');
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(evt);
+    });
+
+    const summaryEvents = [];
+    Object.keys(grouped).forEach(dateKey => {
+      const count = grouped[dateKey].length;
+      summaryEvents.push({
+        id: `summary_${dateKey}`,
+        title: `${count} Schedule${count > 1 ? 's' : ''}`,
+        start: moment(dateKey).startOf('day').toDate(),
+        end: moment(dateKey).endOf('day').toDate(),
+        isSummary: true,
+        dateString: dateKey
+      });
+    });
+    return summaryEvents;
+  }
+
+  const displayEvents = currentView === 'month' ? groupEventsByDay(allEvents) : allEvents;
 
   const handleSelectSlot = ({ start }) => {
     setNewEvent({
@@ -112,6 +137,11 @@ export default function CalendarView() {
   };
 
   const handleSelectEvent = (event) => {
+    if (event.isSummary) {
+      setCurrentDate(moment(event.dateString).toDate());
+      setCurrentView('day');
+      return;
+    }
     if (window.confirm(`Delete rotation event: ${event.title}?`)) {
       handleDelete(event.id);
     }
@@ -158,7 +188,7 @@ export default function CalendarView() {
       <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <Calendar
           localizer={localizer}
-          events={mappedEvents}
+          events={displayEvents}
           startAccessor="start"
           endAccessor="end"
           selectable
