@@ -137,6 +137,14 @@ function saveEvents(newEvents) {
   return data.events;
 }
 
+function deleteNetwork(id) {
+  const data = readDb();
+  if (data.networks) {
+    data.networks = data.networks.filter(n => n.id !== id);
+    writeDb(data);
+  }
+}
+
 module.exports = {
   getSettings,
   saveSettings,
@@ -144,5 +152,6 @@ module.exports = {
   saveNetworks,
   updateNetworkPassword,
   getEvents,
-  saveEvents
+  saveEvents,
+  deleteNetwork
 };

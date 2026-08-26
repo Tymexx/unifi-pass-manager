@@ -8,6 +8,7 @@ export default function Networks() {
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
+  const [networkToDelete, setNetworkToDelete] = useState(null);
 
   useEffect(() => {
     fetchNetworks();
@@ -41,8 +42,24 @@ export default function Networks() {
     ]);
   };
 
-  const handleRemove = (id) => {
-    setNetworks(networks.filter(n => n.id !== id));
+  const handleRemove = (network) => {
+    setNetworkToDelete(network);
+  };
+
+  const confirmRemove = async () => {
+    if (!networkToDelete) return;
+    
+    // If it's an existing network saved in the DB, call the DELETE API
+    if (!networkToDelete.id.toString().startsWith('temp_')) {
+      try {
+        await axios.delete(`${API_BASE}/api/networks/${networkToDelete.id}`);
+      } catch (error) {
+        console.error('Failed to delete network from server', error);
+      }
+    }
+    
+    setNetworks(networks.filter(n => n.id !== networkToDelete.id));
+    setNetworkToDelete(null);
   };
 
   const handleChange = (id, field, value) => {
@@ -96,7 +113,7 @@ export default function Networks() {
         {networks.map(net => (
           <div key={net.id} className="card relative">
             <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
-               <button onClick={() => handleRemove(net.id)} className="btn btn-danger btn-sm btn-icon">
+               <button onClick={() => handleRemove(net)} className="btn btn-danger btn-sm btn-icon">
                  <Trash2 size={16} />
                </button>
             </div>
@@ -165,6 +182,28 @@ export default function Networks() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {networkToDelete && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div className="card" style={{ maxWidth: '400px', width: '90%', background: 'var(--card-bg)' }}>
+            <h3 style={{ marginTop: 0 }}>Delete Smart Network?</h3>
+            <p className="text-muted">Are you sure you want to remove <strong>{networkToDelete.name || 'this network'}</strong>? This action cannot be undone.</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+              <button onClick={() => setNetworkToDelete(null)} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button onClick={confirmRemove} className="btn btn-danger">
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

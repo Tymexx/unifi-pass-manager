@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const { getSettings, saveSettings, getNetworks, saveNetworks, getEvents, saveEvents } = require('./db');
+const { getSettings, saveSettings, getNetworks, saveNetworks, getEvents, saveEvents, deleteNetwork } = require('./db');
 const { startScheduler, restartScheduler, rotatePasswords } = require('./scheduler');
 
 const app = express();
@@ -43,6 +43,13 @@ app.post('/api/networks', (req, res) => {
 // API: Get all networks (for Display component)
 app.get('/api/networks', (req, res) => {
   res.json(getNetworks());
+});
+
+// API: Delete a network
+app.delete('/api/networks/:id', (req, res) => {
+  deleteNetwork(req.params.id);
+  restartScheduler(); // Removing a network might affect schedule
+  res.json({ success: true });
 });
 
 // API: Get all events
