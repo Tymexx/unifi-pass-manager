@@ -81,7 +81,7 @@ Click **+ Add Network** to configure a specific Wi-Fi network.
 - **WLAN ID**: The internal Unifi ID for your Wi-Fi network. 
   *(To find this, open your Unifi Network app in a browser, click on the Wi-Fi network you want to manage, and look at the URL. It will look something like `.../settings/wifi/6a8d895280a8a70e617c43dc` — copy that long string).*
 - **SSID Name**: The exact, case-sensitive broadcast name of the Wi-Fi network. **This must be perfectly accurate**, otherwise the generated QR code will fail to connect guests.
-- **Custom Schedule**: Each network gets its own schedule (e.g., `0 0 * * *` for midnight). Set this individually depending on how often that room's Wi-Fi needs rotating.
+- **Custom Schedule**: Each network gets its own schedule configured via an intuitive visual calendar interface. Select your desired times, dates, and recurring frequencies for when the Wi-Fi needs rotating without touching any code.
 
 Click **Save All Settings** when done. You can then click **Force Rotate All Now** to test the connection immediately. If you get a green success message, you're all set!
 
