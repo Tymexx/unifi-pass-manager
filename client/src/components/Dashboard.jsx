@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, RefreshCw, Wifi, X } from 'lucide-react';
+import { Copy, RefreshCw, Wifi, X, Check } from 'lucide-react';
 import moment from 'moment';
 
 const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
@@ -11,7 +11,7 @@ export default function Dashboard() {
   const [networks, setNetworks] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [rotating, setRotating] = useState(false);
+  const [rotationStatus, setRotationStatus] = useState({});
   const [expandedQr, setExpandedQr] = useState(null);
 
   useEffect(() => {
@@ -34,15 +34,25 @@ export default function Dashboard() {
   };
 
   const handleRotate = async (networkId) => {
-    setRotating(true);
+    setRotationStatus(prev => ({ ...prev, [networkId]: 'loading' }));
     try {
       await axios.post(`${API_BASE}/api/rotate`, { networkId });
       await fetchData(); // Refresh data
+      setRotationStatus(prev => ({ ...prev, [networkId]: 'success' }));
+      
+      // Revert back to ready state after 3 seconds
+      setTimeout(() => {
+        setRotationStatus(prev => ({ ...prev, [networkId]: null }));
+      }, 3000);
     } catch (error) {
       console.error('Failed to rotate password:', error);
+      setRotationStatus(prev => ({ ...prev, [networkId]: 'error' }));
+      
+      // Revert back after error
+      setTimeout(() => {
+        setRotationStatus(prev => ({ ...prev, [networkId]: null }));
+      }, 3000);
       alert('Failed to rotate password. See console for details.');
-    } finally {
-      setRotating(false);
     }
   };
 
@@ -127,11 +137,17 @@ export default function Dashboard() {
                   </div>
                   <button 
                     onClick={() => handleRotate(net.id)} 
-                    className="btn btn-secondary btn-sm"
-                    disabled={rotating}
+                    className={`btn btn-sm ${rotationStatus[net.id] === 'success' ? 'btn-primary' : 'btn-secondary'}`}
+                    disabled={rotationStatus[net.id] === 'loading' || rotationStatus[net.id] === 'success'}
+                    style={{ transition: 'all 0.3s ease' }}
                   >
-                    <RefreshCw size={14} className={rotating ? 'animate-spin' : ''} /> 
-                    Rotate Now
+                    {rotationStatus[net.id] === 'loading' ? (
+                      <><RefreshCw size={14} className="animate-spin" /> Rotating...</>
+                    ) : rotationStatus[net.id] === 'success' ? (
+                      <><Check size={14} /> Success</>
+                    ) : (
+                      <><RefreshCw size={14} /> Rotate Now</>
+                    )}
                   </button>
                 </div>
 
