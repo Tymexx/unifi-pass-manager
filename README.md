@@ -1,12 +1,12 @@
 # Unifi Auto-Password Manager
 
-A local application that connects to a Unifi Controller to automatically change the Wi-Fi password for specific networks (like guest networks or board rooms) on a scheduled basis. It features a modern React frontend that displays the current password and a QR code for easy connection.
+A local application that connects to a Unifi Controller to automatically change the Wi-Fi password for specific networks (like guest networks or smart networks) on a scheduled basis. It features a modern React frontend that displays the current password and a QR code for easy connection.
 
 ## Features
 
 - **Automated Password Rotation**: Automatically generates and sets a new, secure passphrase for configured Unifi Wi-Fi networks on a schedule (e.g., daily at midnight).
 - **QR Code Display**: Shows the current Wi-Fi password and a scannable QR code so guests can connect instantly without typing.
-- **Multiple Networks**: Supports rotating passwords for multiple Wi-Fi networks/board rooms simultaneously.
+- **Multiple Networks**: Supports rotating passwords for multiple Wi-Fi networks/smart networks simultaneously.
 - **Unifi OS Support**: Fully compatible with modern Unifi OS consoles (UDM, UDM Pro, UDR, UCG, etc.) as well as older classic controllers.
 
 ---
@@ -75,9 +75,9 @@ Once the app is running and you've opened the web interface, go to the **Setting
 - **Password**: The local admin password.
 - **Site ID**: For almost all home setups (UDM, UCG, etc.), this should be exactly **`default`**.
 
-### Board Rooms (Networks)
-Click **+ Add Room** to configure a specific Wi-Fi network.
-- **Room Name**: The friendly name displayed in the dropdown (e.g., "Main Board Room").
+### Smart Networks
+Click **+ Add Network** to configure a specific Wi-Fi network.
+- **Network Name**: The friendly name displayed in the dropdown (e.g., "Main Smart Network").
 - **WLAN ID**: The internal Unifi ID for your Wi-Fi network. 
   *(To find this, open your Unifi Network app in a browser, click on the Wi-Fi network you want to manage, and look at the URL. It will look something like `.../settings/wifi/6a8d895280a8a70e617c43dc` — copy that long string).*
 - **SSID Name**: The exact, case-sensitive broadcast name of the Wi-Fi network. **This must be perfectly accurate**, otherwise the generated QR code will fail to connect guests.
@@ -89,7 +89,7 @@ Click **Save All Settings** when done. You can then click **Force Rotate All Now
 
 ## Kiosk Display (For Tablets & Phones)
 
-Once a network is configured, you can launch a dedicated, full-screen **Kiosk Display** for it. This is designed to run on a tablet (like an iPad) mounted in a board room or on a phone behind a front desk.
+Once a network is configured, you can launch a dedicated, full-screen **Kiosk Display** for it. This is designed to run on a tablet (like an iPad) mounted in a smart network location or on a phone behind a front desk.
 
 **How to use:**
 1. From the main Dashboard, find the network you want to display.
