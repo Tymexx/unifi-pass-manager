@@ -11,18 +11,26 @@ A local application that connects to a Unifi Controller to automatically change 
 
 ---
 
-## ⚠️ Unifi Controller Setup (CRITICAL)
+## ⚠️ UniFi Controller Setup (CRITICAL)
 
-To allow this application to update your Wi-Fi passwords, you **MUST** create a local administrator account on your Unifi Controller. The API will likely reject login attempts using your Ubiquiti Cloud/SSO email (e.g., due to 2FA or cloud restrictions).
+This application supports two methods for connecting to your UniFi console, depending on your firmware version.
 
-**How to create a Local Admin:**
-1. Log into your Unifi Console in your web browser.
+### Option A: Official Cloud API (Recommended for Firmware ≥ 5.0.3)
+Newer UniFi OS consoles support official API keys, which is the most secure method.
+1. Log into your UniFi Cloud Portal at **unifi.ui.com**.
+2. Go to **Account Settings** -> **Security** or the **API Keys** section.
+3. Generate a new API Key and copy it. This will be your **UniFi Cloud API Key**.
+4. To find your **Console ID**, click on your console in the UniFi portal and look at the URL. It will look like `https://unifi.ui.com/consoles/<YOUR_CONSOLE_ID>/...`. Copy that string.
+
+### Option B: Legacy Local API (For Firmware < 5.0.3 or Local-Only Access)
+If you are on an older console or prefer strictly local access without API keys, you **MUST** create a local administrator account.
+1. Log into your UniFi Console in your web browser.
 2. Go to **OS Settings** -> **Admins & Users**.
 3. Click **Add New Admin** (or the `+` icon).
 4. Make sure "Allow Ubiquiti SSO" or "Require UI Account" is **UNCHECKED**. You want this to be **Local Access Only**.
-5. Give the user a simple username (e.g., `apiuser`) and a strong password. *(Note: If newer Unifi OS versions force you to enter an email, just use a fake one like `api@myhome.local`—it will act as your username).*
+5. Give the user a simple username (e.g., `apiuser`) and a strong password.
 6. Assign the user **Network Admin** or **Full Management** privileges. (View-only is not enough; the app needs permission to edit Wi-Fi settings).
-7. Save the user. 
+7. Save the user. This will be your **Username** and **Password** in the settings.
 
 ---
 
@@ -70,10 +78,18 @@ sh start.sh
 Once the app is running and you've opened the web interface, go to the **Settings** tab (the gear icon) at the bottom to configure your system.
 
 ### Global Settings
-- **Unifi Controller Host**: The IP address of your Unifi console (e.g., `192.168.1.1`).
-- **Username**: The local admin username you created earlier (e.g., `apiuser`).
+First, select your **Connection Method**:
+
+**If using Official Cloud API:**
+- **UniFi Cloud API Key**: The API key you generated from the UniFi Cloud portal.
+- **Console ID**: The unique ID of your UniFi OS console.
+- **Site ID**: This should be exactly **`default`** for almost all home setups.
+
+**If using Legacy Local API:**
+- **UniFi Controller Host**: The IP address of your UniFi console (e.g., `192.168.1.1`).
+- **Username**: The local admin username you created (e.g., `apiuser`).
 - **Password**: The local admin password.
-- **Site ID**: For almost all home setups (UDM, UCG, etc.), this should be exactly **`default`**.
+- **Site ID**: This should be exactly **`default`** for almost all home setups.
 
 ### Smart Networks
 Click **+ Add Network** to configure a specific Wi-Fi network.
