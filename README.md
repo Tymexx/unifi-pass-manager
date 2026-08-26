@@ -34,15 +34,32 @@ To allow this application to update your Wi-Fi passwords, you **MUST** create a 
 
 ### Starting the Application
 
-We have included a startup script to easily launch both the backend server and the frontend UI at the same time.
+To set up and run the application for the first time, simply copy and paste these commands into your terminal:
 
-1. Open a terminal and navigate to the `unifi-pass-manager` directory.
-2. Run the start script:
-   ```bash
-   sh start.sh
-   ```
-3. The script will boot up the backend API and the Vite frontend. 
-4. Open your web browser and go to: **http://localhost:5180**
+```bash
+# Clone the repository
+git clone https://github.com/Tymexx/unifi-pass-manager.git
+
+# Enter the directory
+cd unifi-pass-manager
+
+# Install the backend dependencies
+cd server
+npm install
+
+# Install the frontend dependencies
+cd ../client
+npm install
+
+# Go back to the root directory
+cd ..
+
+# Run the startup script to launch both servers
+sh start.sh
+```
+
+1. The script will boot up the backend API and the Vite frontend. 
+2. Open your web browser and go to: **http://localhost:5180**
 
 *(To stop the application, just press `Ctrl+C` in the terminal where the script is running).*
 
@@ -57,7 +74,6 @@ Once the app is running and you've opened the web interface, go to the **Setting
 - **Username**: The local admin username you created earlier (e.g., `apiuser`).
 - **Password**: The local admin password.
 - **Site ID**: For almost all home setups (UDM, UCG, etc.), this should be exactly **`default`**.
-- **Global Rotation Schedule**: A standard cron expression. Default is `0 0 * * *` which means exactly at midnight every day.
 
 ### Board Rooms (Networks)
 Click **+ Add Room** to configure a specific Wi-Fi network.
@@ -65,6 +81,7 @@ Click **+ Add Room** to configure a specific Wi-Fi network.
 - **WLAN ID**: The internal Unifi ID for your Wi-Fi network. 
   *(To find this, open your Unifi Network app in a browser, click on the Wi-Fi network you want to manage, and look at the URL. It will look something like `.../settings/wifi/6a8d895280a8a70e617c43dc` — copy that long string).*
 - **SSID Name**: The exact, case-sensitive broadcast name of the Wi-Fi network. **This must be perfectly accurate**, otherwise the generated QR code will fail to connect guests.
+- **Custom Schedule**: Each network gets its own schedule (e.g., `0 0 * * *` for midnight). Set this individually depending on how often that room's Wi-Fi needs rotating.
 
 Click **Save All Settings** when done. You can then click **Force Rotate All Now** to test the connection immediately. If you get a green success message, you're all set!
 
