@@ -1,0 +1,8 @@
+node_modules
+.git
+.env
+dist
+build
+client/dist
+client/node_modules
+server/node_modules

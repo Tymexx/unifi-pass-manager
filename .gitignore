@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+client/dist/
+dist/
+build/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.env.local
+
+# Database/State
+server/data.json
+
+# Editor / System
+.DS_Store
+.vscode/
+.idea/
+*.log

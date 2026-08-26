@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "unifiHost": "192.168.1.1",
+    "unifiUser": "apiuser",
+    "unifiPass": "Your_Super_Secret_Password",
+    "siteId": "default"
+  },
+  "networks": [
+    {
+      "id": "sample-uuid-1234",
+      "name": "Guest-Network",
+      "wlanId": "sample_wlan_id_here",
+      "ssidName": "Guest-Network",
+      "currentPassword": "sample-password"
+    }
+  ],
+  "events": []
+}
