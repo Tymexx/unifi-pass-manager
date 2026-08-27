@@ -80,12 +80,19 @@ export default function Networks() {
   const handlePolicyChange = (id, field, value) => {
     setNetworks(networks.map(n => {
       if (n.id === id) {
+        let updatedPolicy = { ...n.passwordPolicy, [field]: value };
+        
+        if (field === 'type') {
+          if (value === 'password') {
+            updatedPolicy = { type: 'password', length: 14, uppercase: true, lowercase: true, numbers: true, symbols: false };
+          } else {
+            updatedPolicy = { type: 'passphrase', wordCount: 3, separator: '-', capitalize: false, includeNumber: false };
+          }
+        }
+        
         return {
           ...n,
-          passwordPolicy: {
-            ...n.passwordPolicy,
-            [field]: value
-          }
+          passwordPolicy: updatedPolicy
         };
       }
       return n;

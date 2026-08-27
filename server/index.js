@@ -68,7 +68,8 @@ app.post('/api/events', (req, res) => {
 // API: Manual password rotation for all networks
 app.post('/api/rotate', async (req, res) => {
   try {
-    const results = await rotatePasswords();
+    const { networkId } = req.body;
+    const results = await rotatePasswords(networkId);
     if (results && results.length > 0) {
       const anySuccess = results.some(r => r.success);
       if (!anySuccess) {
