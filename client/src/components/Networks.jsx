@@ -163,6 +163,18 @@ export default function Networks() {
                   onChange={(e) => handleChange(net.id, 'ssidName', e.target.value)}
                 />
               </div>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                <input 
+                  type="checkbox" 
+                  id={`hidden-${net.id}`}
+                  checked={net.isHidden || false}
+                  onChange={(e) => handleChange(net.id, 'isHidden', e.target.checked)}
+                  style={{ width: 'auto', margin: 0 }}
+                />
+                <label htmlFor={`hidden-${net.id}`} style={{ margin: 0, fontWeight: 'normal', cursor: 'pointer' }}>
+                  Hide WiFi Name (Hidden Network)
+                </label>
+              </div>
               <div className="form-group">
                 <label>Current Password</label>
                 <input 

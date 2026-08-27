@@ -49,8 +49,8 @@ export default function Display() {
   const selectedNetwork = networks.find(n => n.id === selectedId) || networks[0];
   
   // WIFI:S:<SSID>;T:<WPA|WEP|>;P:<password>;;
-  const qrValue = selectedNetwork.currentPassword 
-    ? `WIFI:S:${selectedNetwork.ssidName};T:WPA;P:${selectedNetwork.currentPassword};;` 
+  const qrValue = selectedNetwork && selectedNetwork.currentPassword 
+    ? `WIFI:S:${selectedNetwork.ssidName};T:WPA;P:${selectedNetwork.currentPassword};${selectedNetwork.isHidden ? 'H:true;' : ''};` 
     : '';
 
   return (

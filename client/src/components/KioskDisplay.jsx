@@ -68,7 +68,7 @@ export default function KioskDisplay({ networkId, theme }) {
 
   // WIFI:S:<SSID>;T:<WPA|WEP|>;P:<password>;;
   const qrValue = network.currentPassword 
-    ? `WIFI:S:${network.ssidName};T:WPA;P:${network.currentPassword};;` 
+    ? `WIFI:S:${network.ssidName};T:WPA;P:${network.currentPassword};${network.isHidden ? 'H:true;' : ''};` 
     : '';
 
   return (

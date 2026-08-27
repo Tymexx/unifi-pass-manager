@@ -249,7 +249,7 @@ export default function Dashboard() {
       ) : (
         <div className="card-grid mt-3">
           {networks.map(net => {
-            const wifiString = `WIFI:T:WPA;S:${net.ssidName};P:${net.currentPassword};;`;
+            const wifiString = `WIFI:T:WPA;S:${net.ssidName};P:${net.currentPassword};${net.isHidden ? 'H:true;' : ''};`;
             return (
               <div key={net.id} className="network-card card">
                 <div className="network-header">
