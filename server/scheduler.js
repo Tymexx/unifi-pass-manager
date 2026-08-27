@@ -86,6 +86,10 @@ async function rotatePasswords(specificNetworkId = null) {
   }
 
   for (const network of networks) {
+    if (network.enabled === false) {
+      console.warn(`Skipping network ${network.name} because it is disabled`);
+      continue;
+    }
     if (!network.wlanId) {
       console.warn(`Skipping network ${network.name} due to missing wlanId`);
       continue;

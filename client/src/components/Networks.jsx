@@ -188,6 +188,17 @@ export default function Networks() {
             {isExpanded && (
               <div style={{ padding: '24px' }}>
                 <div className="form-grid">
+                  <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', gridColumn: '1 / -1', paddingBottom: '12px', borderBottom: '1px solid var(--card-border)' }}>
+                    <input 
+                      type="checkbox" 
+                      id={`enabled-${net.id}`} 
+                      checked={net.enabled !== false} 
+                      onChange={(e) => handleChange(net.id, 'enabled', e.target.checked)} 
+                      style={{ width: 'auto', transform: 'scale(1.2)' }}
+                    />
+                    <label htmlFor={`enabled-${net.id}`} style={{ margin: 0, fontWeight: 600 }}>Enable Network Configuration</label>
+                    <span className="text-muted" style={{ fontSize: '0.85rem', marginLeft: 'auto' }}>If disabled, passwords won't rotate and it will show offline on the dashboard.</span>
+                  </div>
                   <div className="form-group">
                     <label>Name</label>
                     <input 
