@@ -43,24 +43,85 @@ function getNextOccurrence(evt) {
 const ScramblingPassword = ({ isScrambling, password }) => {
   const [displayText, setDisplayText] = useState(password || 'Not Set');
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-
+  const targetPassword = password || 'Not Set';
+  
   useEffect(() => {
+    let interval;
+    let lockedCount = 0;
+    const targetLength = targetPassword.length;
+    
     if (isScrambling) {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         let scrambled = '';
-        const len = password ? password.length : 16;
-        for (let i = 0; i < len; i++) {
+        for (let i = 0; i < targetLength; i++) {
           scrambled += chars[Math.floor(Math.random() * chars.length)];
         }
         setDisplayText(scrambled);
       }, 50);
-      return () => clearInterval(interval);
     } else {
-      setDisplayText(password || 'Not Set');
+      interval = setInterval(() => {
+        if (lockedCount >= targetLength) {
+          clearInterval(interval);
+          setDisplayText(targetPassword);
+          return;
+        }
+        
+        let currentText = targetPassword.substring(0, lockedCount);
+        for (let i = lockedCount; i < targetLength; i++) {
+          currentText += chars[Math.floor(Math.random() * chars.length)];
+        }
+        setDisplayText(currentText);
+        lockedCount++;
+      }, 60); // Speed of character lock-in
     }
-  }, [isScrambling, password]);
+    
+    return () => clearInterval(interval);
+  }, [isScrambling, targetPassword]);
 
-  return <span style={{ fontFamily: isScrambling ? 'monospace' : 'inherit', letterSpacing: isScrambling ? '2px' : 'inherit' }}>{displayText}</span>;
+  return <span style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>{displayText}</span>;
+};
+
+const CountdownTimer = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+  useEffect(() => {
+    if (!targetDate) return;
+    
+    const calculateTimeLeft = () => {
+      const now = moment();
+      const diff = moment.duration(targetDate.diff(now));
+      if (diff.asMilliseconds() <= 0) {
+        setTimeLeft('00:00:00');
+        return false;
+      }
+      
+      const d = Math.floor(diff.asDays());
+      const h = diff.hours();
+      const m = diff.minutes();
+      const s = diff.seconds();
+      
+      let str = '';
+      if (d > 0) {
+        str += `${d}d ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      } else {
+        str += `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+      setTimeLeft(str);
+      return true;
+    };
+    
+    calculateTimeLeft();
+    
+    const interval = setInterval(() => {
+      if (!calculateTimeLeft()) {
+        clearInterval(interval);
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  if (!targetDate) return <span>No schedule</span>;
+  return <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{timeLeft}</span>;
 };
 
 export default function Dashboard() {
@@ -131,7 +192,7 @@ export default function Dashboard() {
     return closestMoment ? closestMoment.fromNow() : 'No upcoming schedules';
   };
 
-  const getNetworkCountdown = (networkId) => {
+  const getNetworkCountdownMoment = (networkId) => {
     const netEvents = events.filter(e => e.networkId === networkId);
     if (!netEvents || netEvents.length === 0) return null;
     
@@ -144,7 +205,7 @@ export default function Dashboard() {
         }
       }
     });
-    return closestMoment ? `Next rotation: ${closestMoment.fromNow()}` : null;
+    return closestMoment;
   };
 
   if (loading) {
@@ -215,8 +276,12 @@ export default function Dashboard() {
                   <button onClick={() => handleCopy(net.currentPassword)} className="password-copy-btn">
                     <Copy size={16} /> Copy Password
                   </button>
-                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-                    {getNetworkCountdown(net.id) || 'No active schedule'}
+                  <span className="text-muted" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {getNetworkCountdownMoment(net.id) ? (
+                      <>
+                        <span>Next:</span> <CountdownTimer targetDate={getNetworkCountdownMoment(net.id)} />
+                      </>
+                    ) : 'No active schedule'}
                   </span>
                 </div>
                 
