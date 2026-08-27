@@ -91,7 +91,7 @@ async function rotatePasswords(specificNetworkId = null) {
       continue;
     }
 
-    const newPassword = generatePassword(settings.passwordPolicy);
+    const newPassword = generatePassword(network.passwordPolicy);
     
     try {
       await unifi.updateWlanPassword(network.wlanId, newPassword, network.mode, network.vlanId);

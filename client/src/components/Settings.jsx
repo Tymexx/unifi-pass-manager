@@ -12,19 +12,7 @@ export default function Settings() {
     unifiPass: '',
     cloudApiKey: '',
     consoleId: '',
-    siteId: 'default',
-    passwordPolicy: {
-      type: 'passphrase',
-      wordCount: 3,
-      separator: '-',
-      capitalize: false,
-      includeNumber: false,
-      length: 14,
-      uppercase: true,
-      lowercase: true,
-      numbers: true,
-      symbols: false
-    }
+    siteId: 'default'
   });
   
   const [status, setStatus] = useState('');
@@ -43,16 +31,6 @@ export default function Settings() {
 
   const handleSettingChange = (e) => {
     setSettings({ ...settings, [e.target.name]: e.target.value });
-  };
-
-  const handlePolicyChange = (name, value) => {
-    setSettings({
-      ...settings,
-      passwordPolicy: {
-        ...settings.passwordPolicy,
-        [name]: value
-      }
-    });
   };
 
   const handleSave = async (e) => {
@@ -158,133 +136,6 @@ export default function Settings() {
                 required 
               />
             </div>
-          </div>
-        </div>
-
-        <div className="card mt-3">
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Password Generator Policy</h2>
-          
-          <div className="form-group mb-3">
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button 
-                type="button" 
-                className={`btn ${settings.passwordPolicy?.type === 'password' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => handlePolicyChange('type', 'password')}
-                style={{ flex: 1 }}
-              >
-                Password
-              </button>
-              <button 
-                type="button" 
-                className={`btn ${settings.passwordPolicy?.type === 'passphrase' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => handlePolicyChange('type', 'passphrase')}
-                style={{ flex: 1 }}
-              >
-                Passphrase
-              </button>
-            </div>
-          </div>
-
-          <div className="form-grid">
-            {settings.passwordPolicy?.type === 'passphrase' ? (
-              <>
-                <div className="form-group">
-                  <label>Number of Words: {settings.passwordPolicy?.wordCount}</label>
-                  <input 
-                    type="range" 
-                    min="3" max="20" 
-                    value={settings.passwordPolicy?.wordCount} 
-                    onChange={(e) => handlePolicyChange('wordCount', parseInt(e.target.value))} 
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Word Separator</label>
-                  <select 
-                    value={settings.passwordPolicy?.separator} 
-                    onChange={(e) => handlePolicyChange('separator', e.target.value)}
-                  >
-                    <option value="-">Hyphen (-)</option>
-                    <option value=" ">Space ( )</option>
-                    <option value=".">Period (.)</option>
-                    <option value="_">Underscore (_)</option>
-                    <option value=",">Comma (,)</option>
-                    <option value="none">None</option>
-                  </select>
-                </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="capitalize" 
-                    checked={settings.passwordPolicy?.capitalize} 
-                    onChange={(e) => handlePolicyChange('capitalize', e.target.checked)} 
-                    style={{ width: 'auto' }}
-                  />
-                  <label htmlFor="capitalize" style={{ margin: 0 }}>Capitalize Words</label>
-                </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="includeNumber" 
-                    checked={settings.passwordPolicy?.includeNumber} 
-                    onChange={(e) => handlePolicyChange('includeNumber', e.target.checked)} 
-                    style={{ width: 'auto' }}
-                  />
-                  <label htmlFor="includeNumber" style={{ margin: 0 }}>Include Number</label>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="form-group full-width">
-                  <label>Length: {settings.passwordPolicy?.length}</label>
-                  <input 
-                    type="range" 
-                    min="5" max="64" 
-                    value={settings.passwordPolicy?.length} 
-                    onChange={(e) => handlePolicyChange('length', parseInt(e.target.value))} 
-                  />
-                </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="uppercase" 
-                    checked={settings.passwordPolicy?.uppercase} 
-                    onChange={(e) => handlePolicyChange('uppercase', e.target.checked)} 
-                    style={{ width: 'auto' }}
-                  />
-                  <label htmlFor="uppercase" style={{ margin: 0 }}>A-Z (Uppercase)</label>
-                </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="lowercase" 
-                    checked={settings.passwordPolicy?.lowercase} 
-                    onChange={(e) => handlePolicyChange('lowercase', e.target.checked)} 
-                    style={{ width: 'auto' }}
-                  />
-                  <label htmlFor="lowercase" style={{ margin: 0 }}>a-z (Lowercase)</label>
-                </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="numbers" 
-                    checked={settings.passwordPolicy?.numbers} 
-                    onChange={(e) => handlePolicyChange('numbers', e.target.checked)} 
-                    style={{ width: 'auto' }}
-                  />
-                  <label htmlFor="numbers" style={{ margin: 0 }}>0-9 (Numbers)</label>
-                </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="symbols" 
-                    checked={settings.passwordPolicy?.symbols} 
-                    onChange={(e) => handlePolicyChange('symbols', e.target.checked)} 
-                    style={{ width: 'auto' }}
-                  />
-                  <label htmlFor="symbols" style={{ margin: 0 }}>!@#$% (Symbols)</label>
-                </div>
-              </>
-            )}
           </div>
         </div>
 

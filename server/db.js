@@ -12,19 +12,7 @@ const defaultData = {
     unifiPass: '',
     cloudApiKey: '',
     consoleId: '',
-    siteId: 'default',
-    passwordPolicy: {
-      type: 'passphrase',
-      wordCount: 3,
-      separator: '-',
-      capitalize: false,
-      includeNumber: false,
-      length: 14,
-      uppercase: true,
-      lowercase: true,
-      numbers: true,
-      symbols: false
-    }
+    siteId: 'default'
   },
   networks: [
     {
@@ -34,7 +22,19 @@ const defaultData = {
       wlanId: '',
       vlanId: '',
       ssidName: 'GuestNetwork',
-      currentPassword: 'supersecretpassword123'
+      currentPassword: 'supersecretpassword123',
+      passwordPolicy: {
+        type: 'passphrase',
+        wordCount: 3,
+        separator: '-',
+        capitalize: false,
+        includeNumber: false,
+        length: 14,
+        uppercase: true,
+        lowercase: true,
+        numbers: true,
+        symbols: false
+      }
     }
   ],
   events: []
@@ -55,6 +55,27 @@ function readDb() {
     if (!data.events) {
       data.events = [];
       mutated = true;
+    }
+
+    // Migrate per-network password policy
+    if (data.networks && Array.isArray(data.networks)) {
+      data.networks.forEach(net => {
+        if (!net.passwordPolicy) {
+          net.passwordPolicy = {
+            type: 'passphrase',
+            wordCount: 3,
+            separator: '-',
+            capitalize: false,
+            includeNumber: false,
+            length: 14,
+            uppercase: true,
+            lowercase: true,
+            numbers: true,
+            symbols: false
+          };
+          mutated = true;
+        }
+      });
     }
 
     // Migration from old schema (v1, v2)

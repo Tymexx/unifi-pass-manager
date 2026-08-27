@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Trash2, Save, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
 
@@ -9,6 +9,7 @@ export default function Networks() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [networkToDelete, setNetworkToDelete] = useState(null);
+  const [expandedNetworkId, setExpandedNetworkId] = useState(null);
 
   useEffect(() => {
     fetchNetworks();
@@ -37,9 +38,22 @@ export default function Networks() {
         wlanId: '',
         vlanId: '',
         ssidName: '',
-        currentPassword: ''
+        currentPassword: '',
+        passwordPolicy: {
+          type: 'passphrase',
+          wordCount: 3,
+          separator: '-',
+          capitalize: false,
+          includeNumber: false,
+          length: 14,
+          uppercase: true,
+          lowercase: true,
+          numbers: true,
+          symbols: false
+        }
       }
     ]);
+    setExpandedNetworkId(newId);
   };
 
   const handleRemove = (network) => {
@@ -61,6 +75,25 @@ export default function Networks() {
 
   const handleChange = (id, field, value) => {
     setNetworks(networks.map(n => n.id === id ? { ...n, [field]: value } : n));
+  };
+
+  const handlePolicyChange = (id, field, value) => {
+    setNetworks(networks.map(n => {
+      if (n.id === id) {
+        return {
+          ...n,
+          passwordPolicy: {
+            ...n.passwordPolicy,
+            [field]: value
+          }
+        };
+      }
+      return n;
+    }));
+  };
+
+  const toggleAccordion = (id) => {
+    setExpandedNetworkId(prev => prev === id ? null : id);
   };
 
   const handleSaveAll = async () => {
@@ -107,100 +140,259 @@ export default function Networks() {
       )}
 
       <div className="card-grid mt-2" style={{ gridTemplateColumns: '1fr' }}>
-        {networks.map(net => (
-          <div key={net.id} className="card relative">
-            <div className="flex-between mb-2" style={{ alignItems: 'center' }}>
-               <h3 className="card-title" style={{ margin: 0 }}>
-                 {net.name ? net.name : 'Network Settings'}
-               </h3>
-               <button onClick={() => handleRemove(net)} className="btn btn-danger btn-sm btn-icon" title="Delete Network">
-                 <Trash2 size={16} />
-               </button>
+        {networks.map(net => {
+          const isExpanded = expandedNetworkId === net.id;
+          const policy = net.passwordPolicy || {};
+          
+          return (
+          <div key={net.id} className="card relative" style={{ padding: 0, overflow: 'hidden' }}>
+            {/* Accordion Header */}
+            <div 
+              className="flex-between" 
+              style={{ 
+                padding: '20px 24px', 
+                cursor: 'pointer', 
+                backgroundColor: isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent', 
+                borderBottom: isExpanded ? '1px solid var(--card-border)' : 'none' 
+              }}
+              onClick={() => toggleAccordion(net.id)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {isExpanded ? <ChevronUp size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
+                <div>
+                  <h3 className="card-title" style={{ margin: 0, marginBottom: '4px' }}>
+                    {net.name ? net.name : 'Network Settings'}
+                  </h3>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {net.mode === 'vlan' ? 'VLAN (PPSK)' : 'Standard WLAN'} • {net.ssidName || 'No SSID'}
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleRemove(net); }} 
+                className="btn btn-danger btn-sm btn-icon" 
+                title="Delete Network"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
             
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Name</label>
-                <input 
-                  type="text" 
-                  value={net.name || ''} 
-                  onChange={(e) => handleChange(net.id, 'name', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label>Mode</label>
-                <select 
-                  value={net.mode || 'standard'} 
-                  onChange={(e) => handleChange(net.id, 'mode', e.target.value)}
-                >
-                  <option value="standard">Standard WLAN</option>
-                  <option value="vlan">VLAN Password (PPSK)</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>WiFi Broadcast ID (WLAN ID)</label>
-                <input 
-                  type="text" 
-                  value={net.wlanId || ''} 
-                  onChange={(e) => handleChange(net.id, 'wlanId', e.target.value)}
-                />
-              </div>
-              {net.mode === 'vlan' && (
-                <div className="form-group">
-                  <label>VLAN ID</label>
-                  <input 
-                    type="text" 
-                    value={net.vlanId || ''} 
-                    onChange={(e) => handleChange(net.id, 'vlanId', e.target.value)}
-                  />
+            {/* Accordion Body */}
+            {isExpanded && (
+              <div style={{ padding: '24px' }}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Name</label>
+                    <input 
+                      type="text" 
+                      value={net.name || ''} 
+                      onChange={(e) => handleChange(net.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Mode</label>
+                    <select 
+                      value={net.mode || 'standard'} 
+                      onChange={(e) => handleChange(net.id, 'mode', e.target.value)}
+                    >
+                      <option value="standard">Standard WLAN</option>
+                      <option value="vlan">VLAN Password (PPSK)</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>WiFi Broadcast ID (WLAN ID)</label>
+                    <input 
+                      type="text" 
+                      value={net.wlanId || ''} 
+                      onChange={(e) => handleChange(net.id, 'wlanId', e.target.value)}
+                    />
+                  </div>
+                  {net.mode === 'vlan' && (
+                    <div className="form-group">
+                      <label>VLAN ID</label>
+                      <input 
+                        type="text" 
+                        value={net.vlanId || ''} 
+                        onChange={(e) => handleChange(net.id, 'vlanId', e.target.value)}
+                      />
+                    </div>
+                  )}
+                  <div className="form-group">
+                    <label>SSID Name</label>
+                    <input 
+                      type="text" 
+                      value={net.ssidName || ''} 
+                      onChange={(e) => handleChange(net.id, 'ssidName', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Current Password</label>
+                    <input 
+                      type="text" 
+                      value={net.currentPassword || ''} 
+                      readOnly
+                      className="text-muted"
+                      style={{ cursor: 'not-allowed', opacity: 0.7 }}
+                    />
+                  </div>
+                  <div className="form-group full-width" style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '12px 16px', 
+                    backgroundColor: 'rgba(255,255,255,0.02)', 
+                    borderRadius: 'var(--radius-sm)', 
+                    border: '1px solid var(--card-border)' 
+                  }}>
+                    <div>
+                      <label htmlFor={`hidden-${net.id}`} style={{ margin: 0, fontWeight: '500', cursor: 'pointer', display: 'block' }}>
+                        Hide WiFi Name (Hidden Network)
+                      </label>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>QR codes will include the hidden network flag</span>
+                    </div>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        id={`hidden-${net.id}`}
+                        checked={net.isHidden || false}
+                        onChange={(e) => handleChange(net.id, 'isHidden', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
                 </div>
-              )}
-              <div className="form-group">
-                <label>SSID Name</label>
-                <input 
-                  type="text" 
-                  value={net.ssidName || ''} 
-                  onChange={(e) => handleChange(net.id, 'ssidName', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label>Current Password</label>
-                <input 
-                  type="text" 
-                  value={net.currentPassword || ''} 
-                  readOnly
-                  className="text-muted"
-                  style={{ cursor: 'not-allowed', opacity: 0.7 }}
-                />
-              </div>
-              <div className="form-group full-width" style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                padding: '12px 16px', 
-                backgroundColor: 'rgba(255,255,255,0.02)', 
-                borderRadius: 'var(--radius-sm)', 
-                border: '1px solid var(--card-border)' 
-              }}>
-                <div>
-                  <label htmlFor={`hidden-${net.id}`} style={{ margin: 0, fontWeight: '500', cursor: 'pointer', display: 'block' }}>
-                    Hide WiFi Name (Hidden Network)
-                  </label>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>QR codes will include the hidden network flag</span>
+
+                <hr style={{ borderColor: 'var(--card-border)', margin: '2rem 0' }} />
+
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Password Generator Policy</h3>
+                
+                <div className="form-group mb-3">
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button 
+                      type="button" 
+                      className={`btn ${policy.type === 'password' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => handlePolicyChange(net.id, 'type', 'password')}
+                      style={{ flex: 1 }}
+                    >
+                      Password
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`btn ${policy.type === 'passphrase' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => handlePolicyChange(net.id, 'type', 'passphrase')}
+                      style={{ flex: 1 }}
+                    >
+                      Passphrase
+                    </button>
+                  </div>
                 </div>
-                <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    id={`hidden-${net.id}`}
-                    checked={net.isHidden || false}
-                    onChange={(e) => handleChange(net.id, 'isHidden', e.target.checked)}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
+
+                <div className="form-grid">
+                  {policy.type === 'passphrase' ? (
+                    <>
+                      <div className="form-group">
+                        <label>Number of Words: {policy.wordCount}</label>
+                        <input 
+                          type="range" 
+                          min="3" max="20" 
+                          value={policy.wordCount || 3} 
+                          onChange={(e) => handlePolicyChange(net.id, 'wordCount', parseInt(e.target.value))} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Word Separator</label>
+                        <select 
+                          value={policy.separator || '-'} 
+                          onChange={(e) => handlePolicyChange(net.id, 'separator', e.target.value)}
+                        >
+                          <option value="-">Hyphen (-)</option>
+                          <option value=" ">Space ( )</option>
+                          <option value=".">Period (.)</option>
+                          <option value="_">Underscore (_)</option>
+                          <option value=",">Comma (,)</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`capitalize-${net.id}`} 
+                          checked={policy.capitalize || false} 
+                          onChange={(e) => handlePolicyChange(net.id, 'capitalize', e.target.checked)} 
+                          style={{ width: 'auto' }}
+                        />
+                        <label htmlFor={`capitalize-${net.id}`} style={{ margin: 0 }}>Capitalize Words</label>
+                      </div>
+                      <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`includeNumber-${net.id}`} 
+                          checked={policy.includeNumber || false} 
+                          onChange={(e) => handlePolicyChange(net.id, 'includeNumber', e.target.checked)} 
+                          style={{ width: 'auto' }}
+                        />
+                        <label htmlFor={`includeNumber-${net.id}`} style={{ margin: 0 }}>Include Number</label>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="form-group full-width">
+                        <label>Length: {policy.length}</label>
+                        <input 
+                          type="range" 
+                          min="5" max="64" 
+                          value={policy.length || 14} 
+                          onChange={(e) => handlePolicyChange(net.id, 'length', parseInt(e.target.value))} 
+                        />
+                      </div>
+                      <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`uppercase-${net.id}`} 
+                          checked={policy.uppercase !== false} 
+                          onChange={(e) => handlePolicyChange(net.id, 'uppercase', e.target.checked)} 
+                          style={{ width: 'auto' }}
+                        />
+                        <label htmlFor={`uppercase-${net.id}`} style={{ margin: 0 }}>A-Z (Uppercase)</label>
+                      </div>
+                      <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`lowercase-${net.id}`} 
+                          checked={policy.lowercase !== false} 
+                          onChange={(e) => handlePolicyChange(net.id, 'lowercase', e.target.checked)} 
+                          style={{ width: 'auto' }}
+                        />
+                        <label htmlFor={`lowercase-${net.id}`} style={{ margin: 0 }}>a-z (Lowercase)</label>
+                      </div>
+                      <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`numbers-${net.id}`} 
+                          checked={policy.numbers !== false} 
+                          onChange={(e) => handlePolicyChange(net.id, 'numbers', e.target.checked)} 
+                          style={{ width: 'auto' }}
+                        />
+                        <label htmlFor={`numbers-${net.id}`} style={{ margin: 0 }}>0-9 (Numbers)</label>
+                      </div>
+                      <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`symbols-${net.id}`} 
+                          checked={policy.symbols || false} 
+                          onChange={(e) => handlePolicyChange(net.id, 'symbols', e.target.checked)} 
+                          style={{ width: 'auto' }}
+                        />
+                        <label htmlFor={`symbols-${net.id}`} style={{ margin: 0 }}>!@#$% (Symbols)</label>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        ))}
+          );
+        })}
         {networks.length === 0 && (
           <div className="text-center text-muted mt-3 py-10">
             No networks added yet. Click "Add Network" to get started.
