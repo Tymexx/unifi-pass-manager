@@ -163,16 +163,29 @@ export default function Networks() {
                   onChange={(e) => handleChange(net.id, 'ssidName', e.target.value)}
                 />
               </div>
-              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-                <input 
-                  type="checkbox" 
-                  id={`hidden-${net.id}`}
-                  checked={net.isHidden || false}
-                  onChange={(e) => handleChange(net.id, 'isHidden', e.target.checked)}
-                  style={{ width: 'auto', margin: 0 }}
-                />
-                <label htmlFor={`hidden-${net.id}`} style={{ margin: 0, fontWeight: 'normal', cursor: 'pointer' }}>
-                  Hide WiFi Name (Hidden Network)
+              <div className="form-group full-width" style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                padding: '12px 16px', 
+                backgroundColor: 'rgba(255,255,255,0.02)', 
+                borderRadius: 'var(--radius-sm)', 
+                border: '1px solid var(--card-border)' 
+              }}>
+                <div>
+                  <label htmlFor={`hidden-${net.id}`} style={{ margin: 0, fontWeight: '500', cursor: 'pointer', display: 'block' }}>
+                    Hide WiFi Name (Hidden Network)
+                  </label>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>QR codes will include the hidden network flag</span>
+                </div>
+                <label className="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    id={`hidden-${net.id}`}
+                    checked={net.isHidden || false}
+                    onChange={(e) => handleChange(net.id, 'isHidden', e.target.checked)}
+                  />
+                  <span className="toggle-slider"></span>
                 </label>
               </div>
               <div className="form-group">
