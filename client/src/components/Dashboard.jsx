@@ -7,6 +7,62 @@ import moment from 'moment';
 
 const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
 
+function getNextOccurrence(evt) {
+  let nextOccurrence = null;
+  if (evt.type === 'one-off' && evt.date && evt.time) {
+    nextOccurrence = moment(`${evt.date} ${evt.time}`, 'YYYY-MM-DD HH:mm');
+  } else if (evt.type === 'recurring') {
+    const [hour, minute] = (evt.time || '00:00').split(':');
+    let current = moment();
+    
+    for (let i = 0; i < 365; i++) {
+      let match = false;
+      if (evt.recurringType === 'daily') {
+        match = true;
+      } else if (evt.recurringType === 'weekly' && current.day() === parseInt(evt.dayOfWeek)) {
+        match = true;
+      } else if (evt.recurringType === 'monthly' && current.date() === parseInt(evt.dayOfMonth)) {
+        match = true;
+      } else if (evt.recurringType === 'yearly' && current.month() === parseInt(evt.month) && current.date() === parseInt(evt.dayOfMonth)) {
+        match = true;
+      }
+      
+      if (match) {
+        const candidate = current.clone().hour(hour).minute(minute).second(0);
+        if (candidate.isAfter(moment())) {
+          nextOccurrence = candidate;
+          break;
+        }
+      }
+      current.add(1, 'days');
+    }
+  }
+  return nextOccurrence && nextOccurrence.isAfter(moment()) ? nextOccurrence : null;
+}
+
+const ScramblingPassword = ({ isScrambling, password }) => {
+  const [displayText, setDisplayText] = useState(password || 'Not Set');
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+
+  useEffect(() => {
+    if (isScrambling) {
+      const interval = setInterval(() => {
+        let scrambled = '';
+        const len = password ? password.length : 16;
+        for (let i = 0; i < len; i++) {
+          scrambled += chars[Math.floor(Math.random() * chars.length)];
+        }
+        setDisplayText(scrambled);
+      }, 50);
+      return () => clearInterval(interval);
+    } else {
+      setDisplayText(password || 'Not Set');
+    }
+  }, [isScrambling, password]);
+
+  return <span style={{ fontFamily: isScrambling ? 'monospace' : 'inherit', letterSpacing: isScrambling ? '2px' : 'inherit' }}>{displayText}</span>;
+};
+
 export default function Dashboard() {
   const [networks, setNetworks] = useState([]);
   const [events, setEvents] = useState([]);
@@ -63,49 +119,32 @@ export default function Dashboard() {
 
   const getNextRotationText = () => {
     if (!events || events.length === 0) return 'No schedules';
-    
     let closestMoment = null;
-    
     events.forEach(evt => {
-      let nextOccurrence = null;
-      
-      if (evt.type === 'one-off' && evt.date && evt.time) {
-        nextOccurrence = moment(`${evt.date} ${evt.time}`, 'YYYY-MM-DD HH:mm');
-      } else if (evt.type === 'recurring') {
-        const [hour, minute] = (evt.time || '00:00').split(':');
-        let current = moment();
-        
-        for (let i = 0; i < 365; i++) {
-          let match = false;
-          if (evt.recurringType === 'daily') {
-            match = true;
-          } else if (evt.recurringType === 'weekly' && current.day() === parseInt(evt.dayOfWeek)) {
-            match = true;
-          } else if (evt.recurringType === 'monthly' && current.date() === parseInt(evt.dayOfMonth)) {
-            match = true;
-          } else if (evt.recurringType === 'yearly' && current.month() === parseInt(evt.month) && current.date() === parseInt(evt.dayOfMonth)) {
-            match = true;
-          }
-          
-          if (match) {
-            const candidate = current.clone().hour(hour).minute(minute).second(0);
-            if (candidate.isAfter(moment())) {
-              nextOccurrence = candidate;
-              break;
-            }
-          }
-          current.add(1, 'days');
-        }
-      }
-      
-      if (nextOccurrence && nextOccurrence.isAfter(moment())) {
-        if (!closestMoment || nextOccurrence.isBefore(closestMoment)) {
-          closestMoment = nextOccurrence;
+      const nextOcc = getNextOccurrence(evt);
+      if (nextOcc) {
+        if (!closestMoment || nextOcc.isBefore(closestMoment)) {
+          closestMoment = nextOcc;
         }
       }
     });
-    
     return closestMoment ? closestMoment.fromNow() : 'No upcoming schedules';
+  };
+
+  const getNetworkCountdown = (networkId) => {
+    const netEvents = events.filter(e => e.networkId === networkId);
+    if (!netEvents || netEvents.length === 0) return null;
+    
+    let closestMoment = null;
+    netEvents.forEach(evt => {
+      const nextOcc = getNextOccurrence(evt);
+      if (nextOcc) {
+        if (!closestMoment || nextOcc.isBefore(closestMoment)) {
+          closestMoment = nextOcc;
+        }
+      }
+    });
+    return closestMoment ? `Next rotation: ${closestMoment.fromNow()}` : null;
   };
 
   if (loading) {
@@ -169,13 +208,16 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="password-display">
-                  {net.currentPassword || 'Not Set'}
+                  <ScramblingPassword isScrambling={rotationStatus[net.id] === 'loading'} password={net.currentPassword} />
                 </div>
                 
                 <div className="flex-between mb-2">
                   <button onClick={() => handleCopy(net.currentPassword)} className="password-copy-btn">
                     <Copy size={16} /> Copy Password
                   </button>
+                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>
+                    {getNetworkCountdown(net.id) || 'No active schedule'}
+                  </span>
                 </div>
                 
                 <div className="network-footer">
