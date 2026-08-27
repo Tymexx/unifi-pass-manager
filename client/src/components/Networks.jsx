@@ -163,6 +163,16 @@ export default function Networks() {
                   onChange={(e) => handleChange(net.id, 'ssidName', e.target.value)}
                 />
               </div>
+              <div className="form-group">
+                <label>Current Password</label>
+                <input 
+                  type="text" 
+                  value={net.currentPassword || ''} 
+                  readOnly
+                  className="text-muted"
+                  style={{ cursor: 'not-allowed', opacity: 0.7 }}
+                />
+              </div>
               <div className="form-group full-width" style={{ 
                 flexDirection: 'row', 
                 alignItems: 'center', 
@@ -187,16 +197,6 @@ export default function Networks() {
                   />
                   <span className="toggle-slider"></span>
                 </label>
-              </div>
-              <div className="form-group">
-                <label>Current Password</label>
-                <input 
-                  type="text" 
-                  value={net.currentPassword || ''} 
-                  readOnly
-                  className="text-muted"
-                  style={{ cursor: 'not-allowed', opacity: 0.7 }}
-                />
               </div>
             </div>
           </div>
