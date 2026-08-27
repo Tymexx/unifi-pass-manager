@@ -118,14 +118,18 @@ function startScheduler() {
     if (rule) {
       jobs[id] = schedule.scheduleJob(rule, async () => {
         console.log(`Running scheduled password rotation for event ${id}...`);
-        await rotatePasswords(networkId);
+        try {
+          await rotatePasswords(networkId);
 
-        // If it was a one-off event, remove it from the database after running
-        if (type === 'one-off') {
-          const currentEvents = getEvents();
-          const updatedEvents = currentEvents.filter(e => e.id !== id);
-          saveEvents(updatedEvents);
-          console.log(`Removed completed one-off event ${id}`);
+          // If it was a one-off event, remove it from the database after running
+          if (type === 'one-off') {
+            const currentEvents = getEvents();
+            const updatedEvents = currentEvents.filter(e => e.id !== id);
+            saveEvents(updatedEvents);
+            console.log(`Removed completed one-off event ${id}`);
+          }
+        } catch (error) {
+          console.error(`Scheduled job for event ${id} failed:`, error.message);
         }
       });
       console.log(`Scheduled job for event ${id} (${type})`);
