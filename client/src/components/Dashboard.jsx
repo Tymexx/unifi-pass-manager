@@ -61,6 +61,53 @@ export default function Dashboard() {
     navigator.clipboard.writeText(password);
   };
 
+  const getNextRotationText = () => {
+    if (!events || events.length === 0) return 'No schedules';
+    
+    let closestMoment = null;
+    
+    events.forEach(evt => {
+      let nextOccurrence = null;
+      
+      if (evt.type === 'one-off' && evt.date && evt.time) {
+        nextOccurrence = moment(`${evt.date} ${evt.time}`, 'YYYY-MM-DD HH:mm');
+      } else if (evt.type === 'recurring') {
+        const [hour, minute] = (evt.time || '00:00').split(':');
+        let current = moment();
+        
+        for (let i = 0; i < 365; i++) {
+          let match = false;
+          if (evt.recurringType === 'daily') {
+            match = true;
+          } else if (evt.recurringType === 'weekly' && current.day() === parseInt(evt.dayOfWeek)) {
+            match = true;
+          } else if (evt.recurringType === 'monthly' && current.date() === parseInt(evt.dayOfMonth)) {
+            match = true;
+          } else if (evt.recurringType === 'yearly' && current.month() === parseInt(evt.month) && current.date() === parseInt(evt.dayOfMonth)) {
+            match = true;
+          }
+          
+          if (match) {
+            const candidate = current.clone().hour(hour).minute(minute).second(0);
+            if (candidate.isAfter(moment())) {
+              nextOccurrence = candidate;
+              break;
+            }
+          }
+          current.add(1, 'days');
+        }
+      }
+      
+      if (nextOccurrence && nextOccurrence.isAfter(moment())) {
+        if (!closestMoment || nextOccurrence.isBefore(closestMoment)) {
+          closestMoment = nextOccurrence;
+        }
+      }
+    });
+    
+    return closestMoment ? closestMoment.fromNow() : 'No upcoming schedules';
+  };
+
   if (loading) {
     return (
       <div className="flex-center" style={{ height: '50vh' }}>
@@ -85,7 +132,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card card">
           <div className="stat-label">Next Rotation</div>
-          <div className="stat-value">{events.length > 0 ? moment(events[0].start).fromNow() : 'No events'}</div>
+          <div className="stat-value">{getNextRotationText()}</div>
         </div>
         <div className="stat-card card">
           <div className="stat-label">Active Schedules</div>
