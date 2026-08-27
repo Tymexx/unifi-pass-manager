@@ -12,7 +12,19 @@ const defaultData = {
     unifiPass: '',
     cloudApiKey: '',
     consoleId: '',
-    siteId: 'default'
+    siteId: 'default',
+    passwordPolicy: {
+      type: 'passphrase',
+      wordCount: 3,
+      separator: '-',
+      capitalize: false,
+      includeNumber: false,
+      length: 14,
+      uppercase: true,
+      lowercase: true,
+      numbers: true,
+      symbols: false
+    }
   },
   networks: [
     {
