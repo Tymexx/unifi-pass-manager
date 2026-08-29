@@ -139,6 +139,57 @@ export default function Settings() {
           </div>
         </div>
 
+        <div className="card mt-3">
+          <div className="card-header">
+            <h2 className="card-title">Email Notifications (SMTP)</h2>
+          </div>
+          <div className="form-grid mt-2">
+            <div className="form-group full-width">
+              <label>SMTP Host (e.g., mail.smtp2go.com)</label>
+              <input type="text" name="smtpHost" value={settings.smtpHost || ''} onChange={handleSettingChange} />
+            </div>
+            <div className="form-group">
+              <label>SMTP Port</label>
+              <input type="text" name="smtpPort" value={settings.smtpPort || ''} onChange={handleSettingChange} placeholder="587" />
+            </div>
+            <div className="form-group">
+              <label>From Address</label>
+              <input type="text" name="smtpFrom" value={settings.smtpFrom || ''} onChange={handleSettingChange} placeholder="noreply@yourdomain.com" />
+            </div>
+            <div className="form-group">
+              <label>SMTP Username</label>
+              <input type="text" name="smtpUser" value={settings.smtpUser || ''} onChange={handleSettingChange} />
+            </div>
+            <div className="form-group">
+              <label>SMTP Password</label>
+              <input type="password" name="smtpPass" value={settings.smtpPass || ''} onChange={handleSettingChange} />
+            </div>
+          </div>
+        </div>
+
+        <div className="card mt-3">
+          <div className="card-header">
+            <h2 className="card-title">Global Push Notifications</h2>
+          </div>
+          <div className="form-grid mt-2">
+            <div className="form-group full-width">
+              <label>Webhook URL (Discord, Slack, ntfy.sh)</label>
+              <input 
+                type="text" 
+                name="webhookUrl" 
+                value={settings.webhookUrl || ''} 
+                onChange={handleSettingChange} 
+                placeholder="https://ntfy.sh/your_secret_topic or https://discord.com/api/webhooks/..."
+              />
+            </div>
+            <div className="form-group full-width">
+              <label>Global Admin Email (Receives all password rotation alerts)</label>
+              <input type="text" name="globalAdminEmail" value={settings.globalAdminEmail || ''} onChange={handleSettingChange} placeholder="admin@yourdomain.com" />
+            </div>
+          </div>
+        </div>
+
+
         <div className="form-group full-width" style={{ marginTop: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button type="submit" className="btn btn-primary">
             <Save size={20} style={{ marginRight: '0.5rem' }} /> Save Settings

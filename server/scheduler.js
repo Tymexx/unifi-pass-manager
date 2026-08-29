@@ -2,6 +2,7 @@ const schedule = require('node-schedule');
 const niceware = require('niceware');
 const { getSettings, getNetworks, getEvents, updateNetworkPassword, saveEvents } = require('./db');
 const { createUnifiClient } = require('./unifiApi');
+const { sendGlobalNotification, sendClientEmail } = require('./notifications');
 
 const jobs = {};
 
@@ -61,7 +62,7 @@ function generatePassword(policy = {}) {
   }
 }
 
-async function rotatePasswords(specificNetworkId = null) {
+async function rotatePasswords(specificNetworkId = null, event = null) {
   const settings = getSettings();
   let networks = getNetworks();
   
@@ -101,6 +102,15 @@ async function rotatePasswords(specificNetworkId = null) {
       await unifi.updateWlanPassword(network.wlanId, newPassword, network.mode, network.vlanId);
       updateNetworkPassword(network.id, newPassword);
       console.log(`Password rotated successfully for ${network.name} to: ${newPassword}`);
+      
+      // Global Notification (fire and forget)
+      sendGlobalNotification(network, newPassword).catch(e => console.error('Global notification error:', e.message));
+
+      // Client Emails (if triggered by a scheduled event)
+      if (event && event.clientEmails) {
+        sendClientEmail(event.clientEmails, network, newPassword, event.title).catch(e => console.error('Client email error:', e.message));
+      }
+
       results.push({ id: network.id, name: network.name, success: true, newPassword });
     } catch (err) {
       console.error(`Failed to rotate password for ${network.name}:`, err.message);
@@ -168,7 +178,7 @@ function startScheduler() {
       jobs[id] = schedule.scheduleJob(rule, async () => {
         console.log(`Running scheduled password rotation for event ${id}...`);
         try {
-          await rotatePasswords(networkId);
+          await rotatePasswords(networkId, event);
 
           // If it was a one-off event, remove it from the database after running
           if (type === 'one-off') {

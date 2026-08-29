@@ -21,7 +21,8 @@ export default function CalendarView() {
     recurringType: 'weekly',
     dayOfWeek: '1',
     dayOfMonth: '1',
-    month: '0'
+    month: '0',
+    clientEmails: ''
   });
 
   const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
@@ -353,6 +354,20 @@ export default function CalendarView() {
                   )}
                 </>
               )}
+
+              <div className="form-group full-width" style={{ marginTop: '1rem' }}>
+                <label>Client Emails (Optional)</label>
+                <input 
+                  type="text" 
+                  value={newEvent.clientEmails} 
+                  onChange={(e) => setNewEvent({...newEvent, clientEmails: e.target.value})} 
+                  placeholder="client1@example.com, client2@example.com" 
+                  style={{ width: '100%' }}
+                />
+                <span className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                  These emails will receive the new Wi-Fi password when the event triggers.
+                </span>
+              </div>
 
               <div className="form-group full-width" style={{ marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">Save Event to Calendar</button>

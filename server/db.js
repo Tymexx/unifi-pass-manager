@@ -12,7 +12,14 @@ const defaultData = {
     unifiPass: '',
     cloudApiKey: '',
     consoleId: '',
-    siteId: 'default'
+    siteId: 'default',
+    smtpHost: '',
+    smtpPort: '587',
+    smtpUser: '',
+    smtpPass: '',
+    smtpFrom: '',
+    globalAdminEmail: '',
+    webhookUrl: ''
   },
   networks: [
     {
