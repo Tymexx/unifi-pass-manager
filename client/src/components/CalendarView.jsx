@@ -7,23 +7,29 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const localizer = momentLocalizer(moment);
 
+const initialEventState = {
+  title: 'Meeting Rotation',
+  networkId: '',
+  type: 'one-off',
+  date: '',
+  time: '12:00',
+  recurringType: 'weekly',
+  dayOfWeek: '1',
+  dayOfMonth: '1',
+  month: '0',
+  clientEmails: '',
+  sendTiming: 'with-schedule',
+  emailSendDate: '',
+  emailSendTime: '09:00',
+  emailSendOffset: '24'
+};
+
 export default function CalendarView() {
   const [events, setEvents] = useState([]);
   const [networks, setNetworks] = useState([]);
   const [showModal, setShowModal] = useState(false);
   
-  const [newEvent, setNewEvent] = useState({
-    title: 'Meeting Rotation',
-    networkId: '',
-    type: 'one-off',
-    date: '',
-    time: '12:00',
-    recurringType: 'weekly',
-    dayOfWeek: '1',
-    dayOfMonth: '1',
-    month: '0',
-    clientEmails: ''
-  });
+  const [newEvent, setNewEvent] = useState(initialEventState);
 
   const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
 
@@ -181,7 +187,7 @@ export default function CalendarView() {
     <div style={{ height: '700px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.5rem' }}>Rotation Schedule</h2>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ padding: '0.5rem 1rem' }}>
+        <button className="btn btn-primary" onClick={() => { setNewEvent(initialEventState); setShowModal(true); }} style={{ padding: '0.5rem 1rem' }}>
           <Plus size={18} /> New Rotation
         </button>
       </div>
@@ -368,6 +374,69 @@ export default function CalendarView() {
                   These emails will receive the new Wi-Fi password when the event triggers.
                 </span>
               </div>
+
+              {newEvent.clientEmails && (
+                <>
+                  <div className="form-group full-width" style={{ marginTop: '1rem' }}>
+                    <label>Email Delivery Timing</label>
+                    <select 
+                      value={newEvent.sendTiming} 
+                      onChange={(e) => setNewEvent({...newEvent, sendTiming: e.target.value})}
+                    >
+                      <option value="with-schedule">Send automatically at the time of rotation</option>
+                      <option value="custom">Custom Pre-Send (Send in advance)</option>
+                    </select>
+                  </div>
+
+                  {newEvent.sendTiming === 'custom' && (
+                    <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '8px', marginTop: '0.5rem', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                      <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#93c5fd' }}>
+                        The password will be generated and emailed in advance. The UniFi network will actually rotate to this password at the scheduled meeting time.
+                      </p>
+                      
+                      {newEvent.type === 'one-off' ? (
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                          <div className="form-group" style={{ flex: 1 }}>
+                            <label>Email Send Date</label>
+                            <input 
+                              type="date" 
+                              value={newEvent.emailSendDate} 
+                              onChange={(e) => setNewEvent({...newEvent, emailSendDate: e.target.value})} 
+                              required={newEvent.sendTiming === 'custom'}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                          <div className="form-group" style={{ flex: 1 }}>
+                            <label>Email Send Time</label>
+                            <input 
+                              type="time" 
+                              value={newEvent.emailSendTime} 
+                              onChange={(e) => setNewEvent({...newEvent, emailSendTime: e.target.value})} 
+                              required={newEvent.sendTiming === 'custom'}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="form-group full-width">
+                          <label>Send Email Prior to Rotation</label>
+                          <select 
+                            value={newEvent.emailSendOffset} 
+                            onChange={(e) => setNewEvent({...newEvent, emailSendOffset: e.target.value})}
+                          >
+                            <option value="1">1 hour before</option>
+                            <option value="2">2 hours before</option>
+                            <option value="12">12 hours before</option>
+                            <option value="24">1 day before</option>
+                            <option value="48">2 days before</option>
+                            <option value="168">1 week before</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="form-group full-width" style={{ marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">Save Event to Calendar</button>

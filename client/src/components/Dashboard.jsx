@@ -81,8 +81,17 @@ const ScramblingPassword = ({ isScrambling, password }) => {
   return <span style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>{displayText}</span>;
 };
 
-const CountdownTimer = ({ targetDate }) => {
+const CountdownTimer = ({ targetDate, onZero }) => {
   const [timeLeft, setTimeLeft] = useState('');
+  const hasTriggeredRef = React.useRef(false);
+  
+  const targetDateMs = targetDate ? targetDate.valueOf() : null;
+  
+  // Reset trigger when targetDate actually changes
+  useEffect(() => {
+    hasTriggeredRef.current = false;
+  }, [targetDateMs]);
+
   useEffect(() => {
     if (!targetDate) return;
     
@@ -91,6 +100,10 @@ const CountdownTimer = ({ targetDate }) => {
       const diff = moment.duration(targetDate.diff(now));
       if (diff.asMilliseconds() <= 0) {
         setTimeLeft('00:00:00');
+        if (!hasTriggeredRef.current) {
+          hasTriggeredRef.current = true;
+          if (onZero) onZero();
+        }
         return false;
       }
       
@@ -118,7 +131,7 @@ const CountdownTimer = ({ targetDate }) => {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [targetDate]);
+  }, [targetDateMs]);
 
   if (!targetDate) return <span>No schedule</span>;
   return <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{timeLeft}</span>;
@@ -279,7 +292,27 @@ export default function Dashboard() {
                   <span className="text-muted" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {getNetworkCountdownMoment(net.id) ? (
                       <>
-                        <span>Next:</span> <CountdownTimer targetDate={getNetworkCountdownMoment(net.id)} />
+                        <span>Next:</span> <CountdownTimer targetDate={getNetworkCountdownMoment(net.id)} onZero={() => {
+                          setRotationStatus(prev => ({ ...prev, [net.id]: 'loading' }));
+                          
+                          // First check after 6 seconds
+                          setTimeout(() => {
+                            fetchData().then(() => {
+                              // If it's still loading (meaning we haven't hit the second timeout)
+                              setRotationStatus(prev => {
+                                if (prev[net.id] === 'loading') {
+                                  return { ...prev, [net.id]: null };
+                                }
+                                return prev;
+                              });
+                            });
+                          }, 6000);
+                          
+                          // Failsafe check after 12 seconds in case Unifi OS is slow
+                          setTimeout(() => {
+                            fetchData();
+                          }, 12000);
+                        }} />
                       </>
                     ) : 'No active schedule'}
                   </span>

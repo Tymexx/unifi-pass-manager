@@ -169,10 +169,17 @@ function getEvents() {
 
 function saveEvents(newEvents) {
   const data = readDb();
-  data.events = newEvents.map(e => ({
-    ...e,
-    id: e.id || uuidv4()
-  }));
+  const existingEvents = data.events || [];
+  
+  data.events = newEvents.map(e => {
+    const existing = existingEvents.find(ex => ex.id === e.id) || {};
+    return {
+      ...e,
+      id: e.id || uuidv4(),
+      nextPreGeneratedPassword: e.nextPreGeneratedPassword !== undefined ? e.nextPreGeneratedPassword : existing.nextPreGeneratedPassword,
+      emailSent: e.emailSent !== undefined ? e.emailSent : existing.emailSent
+    };
+  });
   writeDb(data);
   return data.events;
 }

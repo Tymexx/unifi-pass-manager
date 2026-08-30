@@ -62,7 +62,7 @@ function generatePassword(policy = {}) {
   }
 }
 
-async function rotatePasswords(specificNetworkId = null, event = null) {
+async function rotatePasswords(specificNetworkId = null, event = null, customPassword = null) {
   const settings = getSettings();
   let networks = getNetworks();
   
@@ -96,7 +96,7 @@ async function rotatePasswords(specificNetworkId = null, event = null) {
       continue;
     }
 
-    const newPassword = generatePassword(network.passwordPolicy);
+    const newPassword = customPassword || generatePassword(network.passwordPolicy);
     
     try {
       await unifi.updateWlanPassword(network.wlanId, newPassword, network.mode, network.vlanId);
@@ -108,7 +108,9 @@ async function rotatePasswords(specificNetworkId = null, event = null) {
 
       // Client Emails (if triggered by a scheduled event)
       if (event && event.clientEmails) {
-        sendClientEmail(event.clientEmails, network, newPassword, event.title).catch(e => console.error('Client email error:', e.message));
+        if (event.sendTiming !== 'custom' || !event.emailSent) {
+          sendClientEmail(event.clientEmails, network, newPassword, event.title).catch(e => console.error('Client email error:', e.message));
+        }
       }
 
       results.push({ id: network.id, name: network.name, success: true, newPassword });
@@ -129,11 +131,14 @@ function startScheduler() {
   }
 
   const events = getEvents();
+  const networks = getNetworks();
   
   for (const event of events) {
-    const { id, networkId, type, time, date, recurringType, dayOfWeek, dayOfMonth, month } = event;
+    const { id, networkId, type, time, date, recurringType, dayOfWeek, dayOfMonth, month, sendTiming, emailSendDate, emailSendTime, emailSendOffset, clientEmails } = event;
     
     if (!networkId || !time) continue;
+    const targetNetwork = networks.find(n => n.id === networkId);
+    if (!targetNetwork) continue;
 
     let hour = 0, minute = 0;
     if (time) {
@@ -175,23 +180,99 @@ function startScheduler() {
     }
 
     if (rule) {
-      jobs[id] = schedule.scheduleJob(rule, async () => {
+      // 1. Schedule Rotation Job
+      const rotationJobId = `${id}_rotation`;
+      jobs[rotationJobId] = schedule.scheduleJob(rule, async () => {
         console.log(`Running scheduled password rotation for event ${id}...`);
         try {
-          await rotatePasswords(networkId, event);
+          const currentEvents = getEvents();
+          const currentEvent = currentEvents.find(e => e.id === id);
+          
+          let passwordToUse = null;
+          if (currentEvent && currentEvent.sendTiming === 'custom') {
+            passwordToUse = currentEvent.nextPreGeneratedPassword;
+          }
 
-          // If it was a one-off event, remove it from the database after running
-          if (type === 'one-off') {
-            const currentEvents = getEvents();
-            const updatedEvents = currentEvents.filter(e => e.id !== id);
-            saveEvents(updatedEvents);
-            console.log(`Removed completed one-off event ${id}`);
+          await rotatePasswords(networkId, currentEvent, passwordToUse);
+
+          if (currentEvent) {
+            // Clean up custom states
+            if (currentEvent.sendTiming === 'custom') {
+              currentEvent.nextPreGeneratedPassword = null;
+              currentEvent.emailSent = false;
+              saveEvents(getEvents()); // Save the cleared state
+            }
+            
+            // If it was a one-off event, remove it from the database after running
+            if (currentEvent.type === 'one-off') {
+              const updatedEvents = getEvents().filter(e => e.id !== id);
+              saveEvents(updatedEvents);
+              console.log(`Removed completed one-off event ${id}`);
+            } else {
+              // Recurring event just finished a rotation. Restart scheduler to calculate next pre-send job!
+              restartScheduler();
+            }
           }
         } catch (error) {
           console.error(`Scheduled job for event ${id} failed:`, error.message);
         }
       });
-      console.log(`Scheduled job for event ${id} (${type})`);
+      console.log(`Scheduled rotation job for event ${id} (${type})`);
+
+      // 2. Schedule Pre-Send Email Job (if custom)
+      if (sendTiming === 'custom' && clientEmails) {
+        let emailDateObj = null;
+
+        if (type === 'one-off' && emailSendDate && emailSendTime) {
+          const eParts = emailSendDate.split('-');
+          const tParts = emailSendTime.split(':');
+          if (eParts.length === 3 && tParts.length === 2) {
+            emailDateObj = new Date(
+              parseInt(eParts[0], 10),
+              parseInt(eParts[1], 10) - 1,
+              parseInt(eParts[2], 10),
+              parseInt(tParts[0], 10),
+              parseInt(tParts[1], 10),
+              0
+            );
+          }
+        } else if (type === 'recurring' && emailSendOffset && jobs[rotationJobId]) {
+          // Calculate offset based on next invocation
+          const nextInvocation = jobs[rotationJobId].nextInvocation();
+          if (nextInvocation) {
+            const offsetHours = parseInt(emailSendOffset, 10) || 24;
+            emailDateObj = new Date(nextInvocation.getTime() - (offsetHours * 60 * 60 * 1000));
+          }
+        }
+
+        if (emailDateObj && emailDateObj > new Date() && !event.emailSent) {
+          const emailJobId = `${id}_email`;
+          jobs[emailJobId] = schedule.scheduleJob(emailDateObj, async () => {
+            console.log(`Running pre-send email job for event ${id}...`);
+            try {
+              const currentEvents = getEvents();
+              const currentEvent = currentEvents.find(e => e.id === id);
+              if (!currentEvent) return;
+
+              // Generate the password now
+              const policy = targetNetwork.passwordPolicy || getSettings().passwordPolicy;
+              const preGenerated = generatePassword(policy);
+              
+              currentEvent.nextPreGeneratedPassword = preGenerated;
+              currentEvent.emailSent = true;
+              saveEvents(currentEvents); // Save the password and state
+
+              await sendClientEmail(currentEvent.clientEmails, targetNetwork, preGenerated, currentEvent.title);
+              console.log(`Successfully sent pre-generated password for ${id}`);
+            } catch (err) {
+              console.error(`Pre-send email failed for ${id}:`, err.message);
+            }
+          });
+          console.log(`Scheduled pre-send email job for event ${id} at ${emailDateObj.toISOString()}`);
+        } else if (emailDateObj && emailDateObj <= new Date() && !event.emailSent) {
+          console.log(`Pre-send email time for ${id} is in the past! Email was missed.`);
+        }
+      }
     }
   }
 }
