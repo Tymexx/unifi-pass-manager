@@ -21,7 +21,9 @@ const initialEventState = {
   sendTiming: 'with-schedule',
   emailSendDate: '',
   emailSendTime: '09:00',
-  emailSendOffset: '24'
+  emailSendOffset: '24',
+  revokeAccess: false,
+  revokeDuration: '1'
 };
 
 export default function CalendarView() {
@@ -438,7 +440,40 @@ export default function CalendarView() {
                 </>
               )}
 
-              <div className="form-group full-width" style={{ marginTop: '1rem' }}>
+              <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <input 
+                    type="checkbox" 
+                    id="revokeAccess"
+                    checked={newEvent.revokeAccess || false} 
+                    onChange={(e) => setNewEvent({...newEvent, revokeAccess: e.target.checked})}
+                    style={{ width: 'auto' }}
+                  />
+                  <label htmlFor="revokeAccess" style={{ margin: 0, cursor: 'pointer', fontWeight: 600 }}>Revoke Access After Meeting Ends</label>
+                </div>
+                
+                {newEvent.revokeAccess && (
+                  <div className="form-group full-width" style={{ marginTop: '0.75rem', paddingLeft: '1.75rem' }}>
+                    <label>Auto-rotate password again after:</label>
+                    <select 
+                      value={newEvent.revokeDuration || '1'} 
+                      onChange={(e) => setNewEvent({...newEvent, revokeDuration: e.target.value})}
+                    >
+                      <option value="1">1 hour</option>
+                      <option value="2">2 hours</option>
+                      <option value="4">4 hours</option>
+                      <option value="8">8 hours</option>
+                      <option value="12">12 hours</option>
+                      <option value="24">24 hours</option>
+                    </select>
+                    <span className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                      The password will automatically randomly rotate again after this duration to kick clients off the network. No emails will be sent.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group full-width" style={{ marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary">Save Event to Calendar</button>
               </div>
             </form>

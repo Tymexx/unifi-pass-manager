@@ -113,6 +113,23 @@ async function rotatePasswords(specificNetworkId = null, event = null, customPas
         }
       }
 
+      // Check for Revoke Access
+      if (event && event.revokeAccess && event.revokeDuration) {
+        const revokeHours = parseInt(event.revokeDuration, 10) || 1;
+        const revokeDate = new Date(Date.now() + revokeHours * 60 * 60 * 1000);
+        
+        console.log(`Scheduling REVOKE auto-rotation for ${network.name} at ${revokeDate.toISOString()}`);
+        schedule.scheduleJob(revokeDate, async function() {
+          console.log(`Executing REVOKE auto-rotation for ${network.name} to kick clients...`);
+          try {
+            // Passing event=null so it DOES NOT email the clients the new scrambled password
+            await rotatePasswords(network.id, null, null); 
+          } catch(e) {
+            console.error('Revoke rotation failed:', e);
+          }
+        });
+      }
+
       results.push({ id: network.id, name: network.name, success: true, newPassword });
     } catch (err) {
       console.error(`Failed to rotate password for ${network.name}:`, err.message);
