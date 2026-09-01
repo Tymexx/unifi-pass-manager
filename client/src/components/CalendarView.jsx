@@ -23,7 +23,8 @@ const initialEventState = {
   emailSendTime: '09:00',
   emailSendOffset: '24',
   revokeAccess: false,
-  revokeDuration: '1'
+  revokeHours: '1',
+  revokeMinutes: '0'
 };
 
 export default function CalendarView() {
@@ -455,18 +456,31 @@ export default function CalendarView() {
                 {newEvent.revokeAccess && (
                   <div className="form-group full-width" style={{ marginTop: '0.75rem', paddingLeft: '1.75rem' }}>
                     <label>Auto-rotate password again after:</label>
-                    <select 
-                      value={newEvent.revokeDuration || '1'} 
-                      onChange={(e) => setNewEvent({...newEvent, revokeDuration: e.target.value})}
-                    >
-                      <option value="1">1 hour</option>
-                      <option value="2">2 hours</option>
-                      <option value="4">4 hours</option>
-                      <option value="8">8 hours</option>
-                      <option value="12">12 hours</option>
-                      <option value="24">24 hours</option>
-                    </select>
-                    <span className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="168"
+                          value={newEvent.revokeHours !== undefined ? newEvent.revokeHours : '1'} 
+                          onChange={(e) => setNewEvent({...newEvent, revokeHours: e.target.value})}
+                          style={{ width: '80px' }}
+                        />
+                        <span>hours</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="59"
+                          value={newEvent.revokeMinutes !== undefined ? newEvent.revokeMinutes : '0'} 
+                          onChange={(e) => setNewEvent({...newEvent, revokeMinutes: e.target.value})}
+                          style={{ width: '80px' }}
+                        />
+                        <span>minutes</span>
+                      </div>
+                    </div>
+                    <span className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
                       The password will automatically randomly rotate again after this duration to kick clients off the network. No emails will be sent.
                     </span>
                   </div>

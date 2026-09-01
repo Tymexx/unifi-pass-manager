@@ -114,20 +114,25 @@ async function rotatePasswords(specificNetworkId = null, event = null, customPas
       }
 
       // Check for Revoke Access
-      if (event && event.revokeAccess && event.revokeDuration) {
-        const revokeHours = parseInt(event.revokeDuration, 10) || 1;
-        const revokeDate = new Date(Date.now() + revokeHours * 60 * 60 * 1000);
+      if (event && event.revokeAccess) {
+        const revokeHours = parseInt(event.revokeHours || 0, 10);
+        const revokeMinutes = parseInt(event.revokeMinutes || 0, 10);
         
-        console.log(`Scheduling REVOKE auto-rotation for ${network.name} at ${revokeDate.toISOString()}`);
-        schedule.scheduleJob(revokeDate, async function() {
-          console.log(`Executing REVOKE auto-rotation for ${network.name} to kick clients...`);
-          try {
-            // Passing event=null so it DOES NOT email the clients the new scrambled password
-            await rotatePasswords(network.id, null, null); 
-          } catch(e) {
-            console.error('Revoke rotation failed:', e);
-          }
-        });
+        if (revokeHours > 0 || revokeMinutes > 0) {
+          const totalMs = (revokeHours * 60 * 60 * 1000) + (revokeMinutes * 60 * 1000);
+          const revokeDate = new Date(Date.now() + totalMs);
+          
+          console.log(`Scheduling REVOKE auto-rotation for ${network.name} at ${revokeDate.toISOString()}`);
+          schedule.scheduleJob(revokeDate, async function() {
+            console.log(`Executing REVOKE auto-rotation for ${network.name} to kick clients...`);
+            try {
+              // Passing event=null so it DOES NOT email the clients the new scrambled password
+              await rotatePasswords(network.id, null, null); 
+            } catch(e) {
+              console.error('Revoke rotation failed:', e);
+            }
+          });
+        }
       }
 
       results.push({ id: network.id, name: network.name, success: true, newPassword });
