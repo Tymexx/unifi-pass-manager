@@ -703,13 +703,37 @@ select option {
   background: rgba(0, 0, 0, 0.2);
 }
 
+.calendar-page-wrapper {
+  height: 80vh;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-panel {
+  flex: 1;
+  background: var(--card-bg);
+  padding: 16px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--card-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.calendar-scroll-container {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Calendar overrides for react-big-calendar */
 .rbc-calendar {
-  min-height: 600px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-card);
-  padding: 16px;
+  height: 100%;
+  min-height: 500px;
+  min-width: 700px; /* Force horizontal scroll on narrow screens */
+  background: transparent;
   color: var(--text-primary);
 }
 
@@ -727,7 +751,7 @@ select option {
   border: 1px solid var(--card-border) !important;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--card-bg);
+  background: transparent;
 }
 
 .rbc-calendar .rbc-month-row, 

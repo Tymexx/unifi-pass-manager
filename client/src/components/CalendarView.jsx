@@ -187,30 +187,32 @@ export default function CalendarView() {
   };
 
   return (
-    <div style={{ height: '700px', display: 'flex', flexDirection: 'column' }}>
+    <div className="calendar-page-wrapper">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem' }}>Rotation Schedule</h2>
+        <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Rotation Schedule</h2>
         <button className="btn btn-primary" onClick={() => { setNewEvent(initialEventState); setShowModal(true); }} style={{ padding: '0.5rem 1rem' }}>
           <Plus size={18} /> New Rotation
         </button>
       </div>
 
-      <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <Calendar
-          localizer={localizer}
-          events={displayEvents}
-          startAccessor="start"
-          endAccessor="end"
-          selectable
-          date={currentDate}
-          onNavigate={(newDate) => setCurrentDate(newDate)}
-          view={currentView}
-          onView={(newView) => setCurrentView(newView)}
-          onSelectSlot={handleSelectSlot}
-          onSelectEvent={handleSelectEvent}
-          views={['month', 'week', 'day', 'agenda']}
-          popup
-        />
+      <div className="calendar-panel glass-panel">
+        <div className="calendar-scroll-container">
+          <Calendar
+            localizer={localizer}
+            events={displayEvents}
+            startAccessor="start"
+            endAccessor="end"
+            selectable
+            date={currentDate}
+            onNavigate={(newDate) => setCurrentDate(newDate)}
+            view={currentView}
+            onView={(newView) => setCurrentView(newView)}
+            onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
+            views={['month', 'week', 'day', 'agenda']}
+            popup
+          />
+        </div>
       </div>
 
       {showModal && (
