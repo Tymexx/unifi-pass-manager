@@ -1173,7 +1173,6 @@ input[type="date"], input[type="time"] {
 }
 
 input[type="date"], input[type="time"] {
-  -webkit-appearance: none;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
