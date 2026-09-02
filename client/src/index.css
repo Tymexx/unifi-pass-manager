@@ -787,7 +787,7 @@ select option {
   .main-content {
     margin-left: 0;
     width: 100%;
-    padding: 20px;
+    padding: 16px;
     padding-bottom: 84px;
   }
 
@@ -797,14 +797,41 @@ select option {
 
   .card-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .card {
+    padding: 16px;
   }
 
   .stats-row {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
   
   .page-header h1 {
     font-size: 1.5rem;
+  }
+
+  .password-display {
+    font-size: 0.9rem;
+    padding: 10px 12px;
+  }
+
+  .rbc-calendar {
+    min-height: 500px;
+    padding: 8px;
+    overflow-x: auto;
+  }
+
+  .rbc-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .rbc-toolbar-label {
+    margin: 8px 0;
   }
 }
 
