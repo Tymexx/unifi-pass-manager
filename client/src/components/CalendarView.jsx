@@ -278,7 +278,7 @@ export default function CalendarView() {
               </div>
 
               {newEvent.type === 'one-off' ? (
-                <div className="form-group full-width" style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-row full-width">
                   <div style={{ flex: 1 }}>
                     <label>Date</label>
                     <input 
@@ -416,7 +416,7 @@ export default function CalendarView() {
                       </p>
                       
                       {newEvent.type === 'one-off' ? (
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div className="form-row">
                           <div className="form-group" style={{ flex: 1 }}>
                             <label>Email Send Date</label>
                             <input 
