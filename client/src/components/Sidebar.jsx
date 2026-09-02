@@ -40,7 +40,7 @@ export default function Sidebar() {
   return (
     <div className="sidebar animate-in">
       <div className="sidebar-header">
-        <Shield className="text-primary" size={28} color="var(--primary)" />
+        <img src="/bastion-logo.svg" alt="Bastion" width={28} height={28} />
         <h2 style={{ marginLeft: '10px' }}>Bastion</h2>
       </div>
       <div className="sidebar-nav">
