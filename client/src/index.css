@@ -1186,3 +1186,27 @@ input[type="date"], input[type="time"] {
     overflow-x: hidden;
   }
 }
+
+input[type="date"], input[type="time"] {
+  text-align: left !important;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary) !important;
+  padding: 12px 16px !important;
+  border-radius: var(--radius-btn) !important;
+  font-size: 1rem !important;
+  font-family: inherit !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  color-scheme: dark;
+}
+
+@media (max-width: 768px) {
+  input[type="date"], input[type="time"] {
+    font-size: 0.95rem !important;
+    padding: 12px 14px !important;
+  }
+}
