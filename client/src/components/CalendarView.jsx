@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
+import MobileCalendar from './MobileCalendar';
 import moment from 'moment';
 import axios from 'axios';
 import { Plus, X, Trash2, Repeat } from 'lucide-react';
@@ -33,6 +34,13 @@ export default function CalendarView() {
   const [showModal, setShowModal] = useState(false);
   
   const [newEvent, setNewEvent] = useState(initialEventState);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
 
@@ -196,23 +204,31 @@ export default function CalendarView() {
       </div>
 
       <div className="calendar-panel glass-panel">
-        <div className="calendar-scroll-container">
-          <Calendar
-            localizer={localizer}
-            events={displayEvents}
-            startAccessor="start"
-            endAccessor="end"
-            selectable
-            date={currentDate}
-            onNavigate={(newDate) => setCurrentDate(newDate)}
-            view={currentView}
-            onView={(newView) => setCurrentView(newView)}
-            onSelectSlot={handleSelectSlot}
+        {isMobile ? (
+          <MobileCalendar 
+            events={allEvents} 
+            onAddEvent={() => { setNewEvent(initialEventState); setShowModal(true); }} 
             onSelectEvent={handleSelectEvent}
-            views={['month', 'week', 'day', 'agenda']}
-            popup
           />
-        </div>
+        ) : (
+          <div className="calendar-scroll-container">
+            <Calendar
+              localizer={localizer}
+              events={displayEvents}
+              startAccessor="start"
+              endAccessor="end"
+              selectable
+              date={currentDate}
+              onNavigate={(newDate) => setCurrentDate(newDate)}
+              view={currentView}
+              onView={(newView) => setCurrentView(newView)}
+              onSelectSlot={handleSelectSlot}
+              onSelectEvent={handleSelectEvent}
+              views={['month', 'week', 'day', 'agenda']}
+              popup
+            />
+          </div>
+        )}
       </div>
 
       {showModal && (
