@@ -41,7 +41,7 @@ export default function Sidebar() {
     <div className="sidebar animate-in">
       <div className="sidebar-header">
         <Shield className="text-primary" size={28} color="var(--primary)" />
-        <h2 style={{ marginLeft: '10px' }}>PassCycle</h2>
+        <h2 style={{ marginLeft: '10px' }}>Bastion</h2>
       </div>
       <div className="sidebar-nav">
         {navItems.map((item) => {
