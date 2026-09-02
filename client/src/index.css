@@ -1137,7 +1137,7 @@ select option {
     border-right: none;
     overflow-y: auto;
     animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    padding-bottom: 40px; /* Extra padding for bottom bar area */
+    padding: 24px 16px 40px 16px; /* Extra padding for bottom bar area */
   }
 
   /* Make sure all form inputs take full width on mobile modals */
@@ -1175,4 +1175,14 @@ input[type="date"], input[type="time"] {
 input[type="date"], input[type="time"] {
   max-width: 100% !important;
   box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  input[type="date"], input[type="time"] {
+    font-size: 14px !important;
+    padding: 8px 10px !important;
+  }
+  .form-group {
+    overflow-x: hidden;
+  }
 }
