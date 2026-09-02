@@ -1160,3 +1160,20 @@ input[type="date"], input[type="time"] {
   box-sizing: border-box !important;
 }
 
+
+input[type="date"], input[type="time"] {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+  display: block;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+input[type="date"], input[type="time"] {
+  -webkit-appearance: none;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
