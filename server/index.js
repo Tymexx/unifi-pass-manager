@@ -90,6 +90,7 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.match(/\.[^/]+$/)) {
     return next(); // Let it 404 for API or files (like .js, .css)
   }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile('index.html', { root: path.join(__dirname, '../client/dist') });
 });
 
