@@ -233,7 +233,7 @@ export default function CalendarView() {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="glass-panel modal-content" style={{ width: '500px', maxWidth: '90%' }}>
+          <div className="glass-panel modal-content" >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h3>Add Rotation Event</h3>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>

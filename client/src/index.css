@@ -1114,3 +1114,40 @@ select option {
     margin-bottom: 16px;
   }
 }
+
+/* Mobile Modal Bottom Sheet */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  
+  .modal-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    overflow-y: auto;
+    animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    padding-bottom: 40px; /* Extra padding for bottom bar area */
+  }
+
+  /* Make sure all form inputs take full width on mobile modals */
+  .modal-content input,
+  .modal-content select {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+}
+
+input[type="date"], input[type="time"] {
+  color-scheme: dark;
+}
