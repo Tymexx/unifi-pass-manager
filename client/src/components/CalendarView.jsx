@@ -279,7 +279,7 @@ export default function CalendarView() {
 
               {newEvent.type === 'one-off' ? (
                 <div className="form-row full-width">
-                  <div style={{ flex: 1 }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label>Date</label>
                     <input 
                       type="date" 
@@ -289,7 +289,7 @@ export default function CalendarView() {
                       style={{ width: '100%' }}
                     />
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label>Time</label>
                     <input 
                       type="time" 
