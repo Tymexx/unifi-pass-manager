@@ -202,7 +202,8 @@ export default function Settings() {
             </div>
           )}
         </div>
-      </form>
+        <div style={{ marginTop: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Version 1.0.1 (Mobile Fixes)</div>
+</form>
     </div>
   );
 }
