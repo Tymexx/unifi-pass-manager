@@ -1141,7 +1141,7 @@ select option {
   }
 
   /* Make sure all form inputs take full width on mobile modals */
-  .modal-content input,
+  .modal-content input:not([type="checkbox"]),
   .modal-content select {
     width: 100% !important;
     box-sizing: border-box;
