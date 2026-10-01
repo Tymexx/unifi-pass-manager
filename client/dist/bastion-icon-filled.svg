@@ -1,4 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0d1224"/>
-  <path d="M100 100 L100 60 L148 60 L148 100 L196 100 L196 60 L244 60 L244 100 L268 100 L268 60 L316 60 L316 100 L364 100 L364 60 L412 60 L412 100 L412 300 C412 380 340 440 256 462 C172 440 100 380 100 300 Z" stroke="#0086d6" stroke-width="22" stroke-linejoin="round" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="128" height="128" color="#0086d6" fill="currentColor">
+  <!-- Background for app icons -->
+  <rect width="24" height="24" rx="5" fill="#0d1224" />
+  <path d="M 6.5 4 a 7.7 7.7 0 0 1 11 0" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <path d="M 9.5 7 a 3.5 3.5 0 0 1 5 0" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <path d="M 4 15 V 11 H 7 V 13 H 10 V 9 H 14 V 13 H 17 V 11 H 20 V 15 H 22 V 19 C 22 20.1 21.1 21 20 21 H 4 C 2.9 21 2 20.1 2 19 V 15 H 4 Z" />
+  <circle cx="7.5" cy="17.5" r="1.25" fill="#0d1224" />
+  <circle cx="12" cy="17.5" r="1.25" fill="#0d1224" />
+  <circle cx="16.5" cy="17.5" r="1.25" fill="#0d1224" />
 </svg>
