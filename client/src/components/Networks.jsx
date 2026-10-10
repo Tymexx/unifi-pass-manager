@@ -11,10 +11,6 @@ export default function Networks() {
   const [networkToDelete, setNetworkToDelete] = useState(null);
   const [expandedNetworkId, setExpandedNetworkId] = useState(null);
 
-  useEffect(() => {
-    fetchNetworks();
-  }, []);
-
   const fetchNetworks = async () => {
     try {
       setLoading(true);
@@ -26,6 +22,10 @@ export default function Networks() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchNetworks();
+  }, []);
 
   const handleAddNetwork = () => {
     const newId = `temp_${Date.now()}`;
@@ -136,13 +136,13 @@ export default function Networks() {
       </div>
       
       {status === 'saved' && (
-        <div className="badge badge-success mb-2" style={{ padding: '0.75rem 1rem', fontSize: '0.9rem' }}>
-          <Check size={16} className="mr-2" style={{ marginRight: '0.5rem' }}/> Networks saved successfully!
+        <div className="badge badge-success mb-3" style={{ padding: '8px 14px', fontSize: '0.8125rem' }}>
+          <Check size={14} style={{ marginRight: '6px' }}/> Networks saved successfully!
         </div>
       )}
       {status === 'error' && (
-        <div className="badge badge-danger mb-2" style={{ padding: '0.75rem 1rem', fontSize: '0.9rem' }}>
-          <AlertCircle size={16} className="mr-2" style={{ marginRight: '0.5rem' }}/> Failed to save networks.
+        <div className="badge badge-danger mb-3" style={{ padding: '8px 14px', fontSize: '0.8125rem' }}>
+          <AlertCircle size={14} style={{ marginRight: '6px' }}/> Failed to save networks.
         </div>
       )}
 
@@ -280,29 +280,25 @@ export default function Networks() {
                   </div>
                 </div>
 
-                <hr style={{ borderColor: 'var(--card-border)', margin: '2rem 0' }} />
+                <hr style={{ borderColor: 'var(--card-border)', margin: '1.5rem 0' }} />
 
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Password Generator Policy</h3>
+                <h3 className="card-title" style={{ marginBottom: '0.75rem' }}>Password Generator Policy</h3>
                 
-                <div className="form-group mb-3">
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button 
-                      type="button" 
-                      className={`btn ${policy.type === 'password' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => handlePolicyChange(net.id, 'type', 'password')}
-                      style={{ flex: 1 }}
-                    >
-                      Password
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`btn ${policy.type === 'passphrase' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => handlePolicyChange(net.id, 'type', 'passphrase')}
-                      style={{ flex: 1 }}
-                    >
-                      Passphrase
-                    </button>
-                  </div>
+                <div className="segmented-control mb-3">
+                  <button 
+                    type="button" 
+                    className={`segmented-control-btn ${policy.type === 'password' ? 'active' : ''}`}
+                    onClick={() => handlePolicyChange(net.id, 'type', 'password')}
+                  >
+                    Random Password
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`segmented-control-btn ${policy.type === 'passphrase' ? 'active' : ''}`}
+                    onClick={() => handlePolicyChange(net.id, 'type', 'passphrase')}
+                  >
+                    Passphrase
+                  </button>
                 </div>
 
                 <div className="form-grid">
@@ -420,20 +416,22 @@ export default function Networks() {
 
       {/* Confirmation Modal */}
       {networkToDelete && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div className="card" style={{ maxWidth: '400px', width: '90%', background: 'var(--card-bg)' }}>
-            <h3 style={{ marginTop: 0 }}>Delete Smart Network?</h3>
-            <p className="text-muted">Are you sure you want to remove <strong>{networkToDelete.name || 'this network'}</strong>? This action cannot be undone.</p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-              <button onClick={() => setNetworkToDelete(null)} className="btn btn-secondary">
+        <div className="modal-overlay" onClick={() => setNetworkToDelete(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="modal-header">
+              <h3 className="card-title" style={{ margin: 0 }}>Delete Smart Network?</h3>
+            </div>
+            <div className="modal-body">
+              <p className="text-muted" style={{ margin: 0, fontSize: '0.875rem', lineHeight: '1.5' }}>
+                Are you sure you want to remove <strong>{networkToDelete.name || 'this network'}</strong>? This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setNetworkToDelete(null)} className="btn btn-secondary btn-sm">
                 Cancel
               </button>
-              <button onClick={confirmRemove} className="btn btn-danger">
-                Yes, Delete
+              <button onClick={confirmRemove} className="btn btn-danger btn-sm">
+                Delete Network
               </button>
             </div>
           </div>

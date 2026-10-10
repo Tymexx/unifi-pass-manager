@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import moment from 'moment';
-import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 
-export default function MobileCalendar({ events, onAddEvent, onSelectEvent }) {
+export default function MobileCalendar({ events, _onAddEvent, onSelectEvent }) {
   const [currentMonth, setCurrentMonth] = useState(moment());
   const [selectedDate, setSelectedDate] = useState(moment().startOf('day'));
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Check, AlertCircle } from 'lucide-react';
+import { Save, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 
 export default function Settings() {
@@ -16,6 +16,7 @@ export default function Settings() {
   });
   
   const [status, setStatus] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -45,15 +46,40 @@ export default function Settings() {
     }
   };
 
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    try {
+      const res = await axios.post(`${API_BASE}/api/settings/test-email`, settings);
+      if (res.data.success) {
+        alert("Test email sent successfully! Check your inbox.");
+      } else {
+        alert("Error: " + res.data.error);
+      }
+    } catch (err) {
+      alert("Error sending test email: " + (err.response?.data?.error || err.message));
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
   return (
-    <div>
+    <div className="settings-page animate-in">
       <div className="page-header">
-        <h1>Settings</h1>
-        <p>Configure your UniFi connection</p>
+        <div>
+          <h1>Settings</h1>
+          <p>Configure your UniFi connection, alerts, and notification services</p>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
+        {/* UniFi Connection Card */}
         <div className="card">
+          <div className="card-header">
+            <div>
+              <h2 className="card-title">UniFi Console Connection</h2>
+              <p className="card-subtitle">Authenticate with your UniFi Dream Machine or Express controller</p>
+            </div>
+          </div>
           <div className="form-grid">
             <div className="form-group full-width">
               <label>Connection Method</label>
@@ -70,7 +96,7 @@ export default function Settings() {
             {(settings.connectionMethod || 'legacy') === 'legacy' ? (
               <>
                 <div className="form-group full-width">
-                  <label>Unifi Controller Host (IP or Domain)</label>
+                  <label>UniFi Controller Host (IP or Domain)</label>
                   <input 
                     type="text" 
                     name="unifiHost" 
@@ -139,40 +165,45 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="card mt-3">
-          <div className="card-header flex-between mb-2">
-            <h2 className="card-title">Email Notifications (SMTP)</h2>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        {/* SMTP Email Notifications Card */}
+        <div className="card mt-4">
+          <div className="card-header flex-between">
+            <div>
+              <h2 className="card-title">Email Notifications (SMTP)</h2>
+              <p className="card-subtitle">Configure outbound mail server for automated alerts</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <input 
                 type="email" 
-                placeholder="Send Test To..." 
+                placeholder="Send test to..." 
                 value={settings.testEmailRecipient || ''} 
                 onChange={(e) => setSettings({...settings, testEmailRecipient: e.target.value})}
-                style={{ padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-btn)', border: '1px solid var(--card-border)', background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)', width: '200px' }}
+                style={{ width: '220px', height: '32px', fontSize: '0.8125rem' }}
               />
-              <button type="button" className="btn btn-secondary btn-sm" onClick={async () => {
-                try {
-                  const res = await axios.post(API_BASE + "/api/settings/test-email", settings);
-                  if (res.data.success) alert("Test email sent successfully! Check your inbox.");
-                  else alert("Error: " + res.data.error);
-                } catch (err) {
-                  alert("Error sending test email: " + (err.response?.data?.error || err.message));
-                }
-              }}>Test Connection</button>
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-sm" 
+                onClick={handleTestEmail}
+                disabled={testingEmail}
+              >
+                {testingEmail ? (
+                  <><RefreshCw size={13} className="animate-spin" /> Sending...</>
+                ) : 'Test Connection'}
+              </button>
             </div>
           </div>
-          <div className="form-grid mt-2">
+          <div className="form-grid">
             <div className="form-group full-width">
-              <label>SMTP Host (e.g., mail.smtp2go.com)</label>
-              <input type="text" name="smtpHost" value={settings.smtpHost || ''} onChange={handleSettingChange} />
+              <label>SMTP Host</label>
+              <input type="text" name="smtpHost" value={settings.smtpHost || ''} onChange={handleSettingChange} placeholder="mail.smtp2go.com" />
             </div>
             <div className="form-group">
               <label>SMTP Port</label>
-              <input type="text" name="smtpPort" value={settings.smtpPort || ''} onChange={handleSettingChange} placeholder="587" />
+              <input type="text" name="smtpPort" value={settings.smtpPort || ''} onChange={handleSettingChange} placeholder="2525 or 587" />
             </div>
             <div className="form-group">
               <label>From Address</label>
-              <input type="text" name="smtpFrom" value={settings.smtpFrom || ''} onChange={handleSettingChange} placeholder="noreply@yourdomain.com" />
+              <input type="text" name="smtpFrom" value={settings.smtpFrom || ''} onChange={handleSettingChange} placeholder="Bastion@directconnect.global" />
             </div>
             <div className="form-group">
               <label>SMTP Username</label>
@@ -185,11 +216,15 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="card mt-3">
+        {/* Global Notifications Card */}
+        <div className="card mt-4">
           <div className="card-header">
-            <h2 className="card-title">Global Push Notifications</h2>
+            <div>
+              <h2 className="card-title">Global Notifications</h2>
+              <p className="card-subtitle">Broadcast password rotations to external channels and admin inboxes</p>
+            </div>
           </div>
-          <div className="form-grid mt-2">
+          <div className="form-grid">
             <div className="form-group full-width">
               <label>Webhook URL (Discord, Slack, ntfy.sh)</label>
               <input 
@@ -197,31 +232,40 @@ export default function Settings() {
                 name="webhookUrl" 
                 value={settings.webhookUrl || ''} 
                 onChange={handleSettingChange} 
-                placeholder="https://ntfy.sh/your_secret_topic or https://discord.com/api/webhooks/..."
+                placeholder="https://discord.com/api/webhooks/..."
               />
             </div>
             <div className="form-group full-width">
               <label>Global Admin Email (Receives all password rotation alerts)</label>
-              <input type="text" name="globalAdminEmail" value={settings.globalAdminEmail || ''} onChange={handleSettingChange} placeholder="admin@yourdomain.com" />
+              <input type="text" name="globalAdminEmail" value={settings.globalAdminEmail || ''} onChange={handleSettingChange} placeholder="admin@directconnect.global" />
             </div>
           </div>
         </div>
 
+        {/* Save Bar */}
+        <div className="mt-4 flex-between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button type="submit" className="btn btn-primary">
+              <Save size={16} /> Save Settings
+            </button>
+            
+            {status && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem' }}>
+                {status === 'saved' ? (
+                  <><Check size={16} color="var(--success)" /> <span style={{ color: 'var(--success)' }}>Settings saved</span></>
+                ) : (
+                  <><AlertCircle size={16} color="var(--danger)" /> <span style={{ color: 'var(--danger)' }}>Error saving settings</span></>
+                )}
+              </div>
+            )}
+          </div>
 
-        <div className="form-group full-width" style={{ marginTop: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button type="submit" className="btn btn-primary">
-            <Save size={20} style={{ marginRight: '0.5rem' }} /> Save Settings
-          </button>
-          
-          {status && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {status === 'saved' ? <Check color="var(--success, #10b981)" /> : <AlertCircle color="var(--danger, #ef4444)" />}
-              {status === 'saved' ? 'Settings saved successfully' : 'Error saving settings'}
-            </div>
-          )}
+          <div className="version-badge">
+            <span className="version-tag">Bastion v{__APP_VERSION__}</span>
+            <span className="build-tag">• build {__BUILD_HASH__}</span>
+          </div>
         </div>
-        <div style={{ marginTop: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Version 1.0.1</div>
-</form>
+      </form>
     </div>
   );
 }

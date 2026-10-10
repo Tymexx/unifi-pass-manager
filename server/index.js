@@ -12,6 +12,14 @@ const PORT = process.env.PORT || 3050;
 app.use(cors());
 app.use(express.json());
 
+// API: Version & Health
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: require('./package.json').version || '1.0.0',
+    status: 'online'
+  });
+});
+
 // API: Get settings
 app.get('/api/settings', (req, res) => {
   res.json({

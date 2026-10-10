@@ -186,9 +186,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleCopy = (password) => {
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopy = (id, password) => {
     if (!password) return;
     navigator.clipboard.writeText(password);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const getNextRotationText = () => {
@@ -286,10 +290,14 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="flex-between mb-2">
-                  <button onClick={() => handleCopy(net.currentPassword)} className="password-copy-btn">
-                    <Copy size={16} /> Copy Password
+                  <button onClick={() => handleCopy(net.id, net.currentPassword)} className="password-copy-btn">
+                    {copiedId === net.id ? (
+                      <><Check size={14} style={{ color: 'var(--success)' }} /> <span style={{ color: 'var(--success)' }}>Copied!</span></>
+                    ) : (
+                      <><Copy size={14} /> <span>Copy</span></>
+                    )}
                   </button>
-                  <span className="text-muted" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="text-muted" style={{ fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {getNetworkCountdownMoment(net.id) ? (
                       <>
                         <span>Next:</span> <CountdownTimer targetDate={getNetworkCountdownMoment(net.id)} onZero={() => {

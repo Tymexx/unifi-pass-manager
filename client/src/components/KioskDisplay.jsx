@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Wifi, RefreshCw, Eye, X } from 'lucide-react';
+import { RefreshCw, Eye, X } from 'lucide-react';
 import axios from 'axios';
 
 export default function KioskDisplay({ networkId, theme }) {

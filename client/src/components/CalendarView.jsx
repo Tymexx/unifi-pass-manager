@@ -3,7 +3,7 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import MobileCalendar from './MobileCalendar';
 import moment from 'moment';
 import axios from 'axios';
-import { Plus, X, Trash2, Repeat } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const localizer = momentLocalizer(moment);
@@ -195,15 +195,18 @@ export default function CalendarView() {
   };
 
   return (
-    <div className="calendar-page-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Rotation Schedule</h2>
-        <button className="btn btn-primary" onClick={() => { setNewEvent(initialEventState); setShowModal(true); }} style={{ padding: '0.5rem 1rem' }}>
-          <Plus size={18} /> New Rotation
+    <div className="calendar-page-wrapper animate-in">
+      <div className="page-header flex-between mb-3">
+        <div>
+          <h1>Schedule</h1>
+          <p>Automate Wi-Fi password rotations on calendar schedules</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setNewEvent(initialEventState); setShowModal(true); }}>
+          <Plus size={16} /> New Rotation
         </button>
       </div>
 
-      <div className="calendar-panel glass-panel">
+      <div className="calendar-panel">
         {isMobile ? (
           <MobileCalendar 
             events={allEvents} 
@@ -232,16 +235,16 @@ export default function CalendarView() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="glass-panel modal-content" >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3>Add Rotation Event</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
-                <X size={24} />
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="card-title" style={{ margin: 0 }}>Add Rotation Event</h3>
+              <button onClick={() => setShowModal(false)} className="btn-icon btn-sm" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleSaveEvent} className="settings-form">
+            <form onSubmit={handleSaveEvent} style={{ padding: '24px' }}>
               <div className="form-group full-width">
                 <label>Event Title</label>
                 <input 

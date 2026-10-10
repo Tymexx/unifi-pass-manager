@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Copy, ExternalLink, Monitor } from 'lucide-react';
+import { Copy, Check, ExternalLink, Monitor } from 'lucide-react';
 
 const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
 
@@ -8,6 +8,7 @@ export default function KioskManager() {
   const [networks, setNetworks] = useState([]);
   const [themes, setThemes] = useState({});
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
     const fetchNetworks = async () => {
@@ -37,8 +38,10 @@ export default function KioskManager() {
     return `${window.location.origin}/?kiosk=${id}&theme=${theme}`;
   };
 
-  const handleCopy = (url) => {
+  const handleCopy = (id, url) => {
     navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleOpen = (url) => {
@@ -50,36 +53,47 @@ export default function KioskManager() {
   return (
     <div className="kiosk-manager animate-in">
       <div className="page-header">
-        <h1>Kiosk Displays</h1>
-        <p>Generate QR code displays for tablets or e-ink screens</p>
+        <div>
+          <h1>Kiosk Displays</h1>
+          <p>Generate QR code displays for tablets or e-ink screens</p>
+        </div>
       </div>
 
       <div className="card-grid" style={{ gridTemplateColumns: '1fr' }}>
         {networks.map(net => {
           const url = getKioskUrl(net.id);
+          const currentTheme = themes[net.id] || 'dark';
+
           return (
             <div key={net.id} className="card">
               <div className="form-grid">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                   <h3 className="card-title">{net.name}</h3>
-                   <p className="text-muted text-sm font-mono" style={{ marginBottom: '1rem' }}>SSID: {net.ssidName}</p>
+                <div>
+                   <h3 className="card-title" style={{ margin: 0, marginBottom: '4px' }}>{net.name}</h3>
+                   <span className="text-muted font-mono" style={{ fontSize: '0.8125rem' }}>SSID: {net.ssidName}</span>
                 </div>
                 
-                <div className="form-group flex" style={{ alignItems: 'center', gap: '1rem' }}>
-                  <label style={{ margin: 0 }}>Theme:</label>
-                  <select 
-                    value={themes[net.id] || 'dark'} 
-                    onChange={(e) => handleThemeChange(net.id, e.target.value)}
-                    style={{ width: 'auto' }}
-                  >
-                    <option value="dark">Dark (Tablets)</option>
-                    <option value="eink">E-Ink (High Contrast)</option>
-                  </select>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <div className="segmented-control" style={{ maxWidth: '280px', width: '100%' }}>
+                    <button 
+                      type="button" 
+                      className={`segmented-control-btn ${currentTheme === 'dark' ? 'active' : ''}`}
+                      onClick={() => handleThemeChange(net.id, 'dark')}
+                    >
+                      Dark (Tablets)
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`segmented-control-btn ${currentTheme === 'eink' ? 'active' : ''}`}
+                      onClick={() => handleThemeChange(net.id, 'eink')}
+                    >
+                      E-Ink (Contrast)
+                    </button>
+                  </div>
                 </div>
                 
-                <div className="form-group full-width" style={{ position: 'relative' }}>
-                  <label>Kiosk URL</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="form-group full-width">
+                  <label>Kiosk Display URL</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <input 
                       type="text" 
                       value={url} 
@@ -88,10 +102,18 @@ export default function KioskManager() {
                       style={{ cursor: 'text', flex: 1, minWidth: 0 }}
                     />
                     <div className="btn-group">
-                      <button onClick={() => handleCopy(url)} className="btn btn-secondary btn-icon" title="Copy URL">
-                        <Copy size={16} />
+                      <button 
+                        onClick={() => handleCopy(net.id, url)} 
+                        className="btn btn-secondary btn-icon" 
+                        title="Copy URL"
+                      >
+                        {copiedId === net.id ? <Check size={16} style={{ color: 'var(--success)' }} /> : <Copy size={16} />}
                       </button>
-                      <button onClick={() => handleOpen(url)} className="btn btn-primary btn-icon" title="Open Preview">
+                      <button 
+                        onClick={() => handleOpen(url)} 
+                        className="btn btn-primary btn-icon" 
+                        title="Open Preview"
+                      >
                         <ExternalLink size={16} />
                       </button>
                     </div>

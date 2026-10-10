@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wifi, Calendar, Monitor, Settings, Shield } from 'lucide-react';
+import { LayoutDashboard, Wifi, Calendar, Monitor, Settings } from 'lucide-react';
 
 export default function Sidebar() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -28,7 +28,7 @@ export default function Sidebar() {
           const active = location.pathname === item.path ? 'active' : '';
           return (
             <Link key={item.path} to={item.path} className={`bottom-bar-link ${active}`}>
-              <Icon size={24} />
+              <Icon size={22} />
               <span>{item.label}</span>
             </Link>
           );
@@ -40,8 +40,8 @@ export default function Sidebar() {
   return (
     <div className="sidebar animate-in">
       <div className="sidebar-header">
-        <img src="/bastion-logo-v2.svg" alt="Bastion" width={28} height={28} />
-        <h2 style={{ marginLeft: '10px' }}>Bastion</h2>
+        <img src="/bastion-logo-v2.svg" alt="Bastion" width={26} height={26} />
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Bastion</h2>
       </div>
       <div className="sidebar-nav">
         {navItems.map((item) => {
@@ -49,14 +49,17 @@ export default function Sidebar() {
           const active = location.pathname === item.path ? 'active' : '';
           return (
             <Link key={item.path} to={item.path} className={`sidebar-link ${active}`}>
-              <Icon size={20} />
+              <Icon size={18} />
               {item.label}
             </Link>
           );
         })}
       </div>
       <div className="sidebar-footer">
-        <p className="text-muted">Beta v0.1</p>
+        <div className="version-badge">
+          <span className="version-tag">v{__APP_VERSION__}</span>
+          <span className="build-tag">({__BUILD_HASH__})</span>
+        </div>
       </div>
     </div>
   );
