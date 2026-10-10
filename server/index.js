@@ -7,7 +7,8 @@ const {
   getSettings, saveSettings, 
   getNetworks, saveNetworks, 
   getEvents, saveEvents, deleteNetwork,
-  getBookings, saveBookings, addBooking, updateBooking, deleteBooking 
+  getBookings, saveBookings, addBooking, updateBooking, deleteBooking,
+  getFormConfig, saveFormConfig
 } = require('./db');
 const { startScheduler, restartScheduler, rotatePasswords } = require('./scheduler');
 const { 
@@ -149,6 +150,34 @@ app.post('/api/rotate', async (req, res) => {
   }
 });
 
+// API: Public form configuration for embed widget
+app.get('/api/public/form-config', (req, res) => {
+  try {
+    res.json(getFormConfig());
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Get form configuration (admin)
+app.get('/api/form-config', (req, res) => {
+  try {
+    res.json(getFormConfig());
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Save form configuration (admin)
+app.post('/api/form-config', (req, res) => {
+  try {
+    const updated = saveFormConfig(req.body);
+    res.json({ success: true, formConfig: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // API: Get all bookings & pending count
 app.get('/api/bookings', (req, res) => {
   try {
@@ -166,6 +195,7 @@ app.post('/api/bookings', async (req, res) => {
     const {
       name,
       email,
+      phone,
       company,
       date,
       time,
@@ -173,7 +203,8 @@ app.post('/api/bookings', async (req, res) => {
       durationMinutes,
       requestedNetworkId,
       requestedNetworkName,
-      sendTiming
+      sendTiming,
+      customFields
     } = req.body;
 
     if (!name || !email || !date || !time) {
@@ -188,6 +219,7 @@ app.post('/api/bookings', async (req, res) => {
     const booking = addBooking({
       name: name.trim(),
       email: email.trim(),
+      phone: (phone || '').trim(),
       company: (company || '').trim(),
       date,
       time,
@@ -196,6 +228,7 @@ app.post('/api/bookings', async (req, res) => {
       requestedNetworkId: requestedNetworkId || 'any',
       requestedNetworkName: requestedNetworkName || 'Any / Auto-Assign',
       sendTiming: sendTiming || '1h',
+      customFields: customFields || {},
       status: 'pending'
     });
 

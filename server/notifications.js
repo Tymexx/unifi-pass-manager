@@ -195,6 +195,15 @@ async function sendBookingAdminAlertEmail(booking) {
 
   const subject = `[Bastion Alert] New Wi-Fi Request: ${booking.name} (${booking.company || 'Guest'})`;
   const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
+  let customFieldsHtml = '';
+  if (booking.customFields && typeof booking.customFields === 'object') {
+    customFieldsHtml = Object.entries(booking.customFields)
+      .filter(([_, val]) => val !== undefined && val !== null && val !== '')
+      .map(([k, val]) => `
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">${k}:</strong> <span style="color: #fff;">${typeof val === 'boolean' ? (val ? 'Yes' : 'No') : val}</span></div>
+      `).join('');
+  }
+
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
       <h2 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 1.3rem;">New Wi-Fi Access Request</h2>
@@ -203,11 +212,13 @@ async function sendBookingAdminAlertEmail(booking) {
       <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 20px 0;">
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Guest Name:</strong> <span style="color: #fff;">${booking.name}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Guest Email:</strong> <span style="color: #fff;">${booking.email}</span></div>
+        ${booking.phone ? `<div style="margin-bottom: 8px;"><strong style="color: #949da8;">Phone Number:</strong> <span style="color: #fff;">${booking.phone}</span></div>` : ''}
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Company / Event:</strong> <span style="color: #fff;">${booking.company || 'N/A'}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Start Time:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Preferred Network:</strong> <span style="color: #fff;">${booking.requestedNetworkName || 'Any / Auto-Assign'}</span></div>
-        <div><strong style="color: #949da8;">Delivery Timing:</strong> <span style="color: #fff;">${booking.sendTiming || 'Standard'}</span></div>
+        <div style="margin-bottom: ${customFieldsHtml ? '8px' : '0'};"><strong style="color: #949da8;">Delivery Timing:</strong> <span style="color: #fff;">${booking.sendTiming || 'Standard'}</span></div>
+        ${customFieldsHtml}
       </div>
       
       <p style="color: #949da8; font-size: 0.9rem;">

@@ -44,8 +44,26 @@ const defaultData = {
       }
     }
   ],
-  events: []
+  events: [],
+  formConfig: {
+    title: 'Guest Wi-Fi Booking',
+    description: 'Schedule temporary, secure high-speed Wi-Fi access for your upcoming visit.',
+    submitButtonText: 'Request Wi-Fi Access',
+    fields: [
+      { id: 'name', type: 'text', label: 'Your Name', placeholder: 'e.g. Sarah Jenkins', required: true, isSystem: true, locked: true },
+      { id: 'email', type: 'email', label: 'Email Address', placeholder: 'Where to send access credentials', required: true, isSystem: true, locked: true },
+      { id: 'phone', type: 'phone', label: 'Phone Number', placeholder: 'e.g. +44 7700 900077', required: false, isSystem: true, locked: false },
+      { id: 'company', type: 'text', label: 'Company / Event', placeholder: 'e.g. Acme Studio / Client Presentation', required: false, isSystem: true, locked: false },
+      { id: 'date', type: 'date', label: 'Visit Date', required: true, isSystem: true, locked: true },
+      { id: 'time', type: 'time', label: 'Start Time', required: true, isSystem: true, locked: true },
+      { id: 'duration', type: 'duration', label: 'Access Duration', required: true, isSystem: true, locked: true },
+      { id: 'network', type: 'network_select', label: 'Preferred Network', required: false, isSystem: true, locked: false },
+      { id: 'sendTiming', type: 'timing_select', label: 'When should your password be delivered?', required: true, isSystem: true, locked: false }
+    ]
+  }
 };
+
+const defaultFormConfig = defaultData.formConfig;
 
 function readDb() {
   if (!fs.existsSync(DB_FILE)) {
@@ -67,6 +85,12 @@ function readDb() {
     // Ensure bookings array exists
     if (!data.bookings) {
       data.bookings = [];
+      mutated = true;
+    }
+
+    // Ensure formConfig exists
+    if (!data.formConfig || !Array.isArray(data.formConfig.fields)) {
+      data.formConfig = defaultFormConfig;
       mutated = true;
     }
 
@@ -246,6 +270,39 @@ function deleteBooking(id) {
   }
 }
 
+function getFormConfig() {
+  const db = readDb();
+  return db.formConfig || defaultFormConfig;
+}
+
+function saveFormConfig(config) {
+  const data = readDb();
+  
+  // Guarantee system locked fields are not removed
+  const existingFields = (config && Array.isArray(config.fields)) ? config.fields : defaultFormConfig.fields;
+  const lockedFieldIds = ['name', 'email', 'date', 'time', 'duration'];
+  
+  const currentFieldIds = existingFields.map(f => f.id);
+  const verifiedFields = [...existingFields];
+  
+  for (const lockedId of lockedFieldIds) {
+    if (!currentFieldIds.includes(lockedId)) {
+      const defaultField = defaultFormConfig.fields.find(f => f.id === lockedId);
+      if (defaultField) verifiedFields.push(defaultField);
+    }
+  }
+
+  data.formConfig = {
+    title: (config && config.title) || defaultFormConfig.title,
+    description: (config && config.description !== undefined) ? config.description : defaultFormConfig.description,
+    submitButtonText: (config && config.submitButtonText) || defaultFormConfig.submitButtonText,
+    fields: verifiedFields
+  };
+  
+  writeDb(data);
+  return data.formConfig;
+}
+
 module.exports = {
   getSettings,
   saveSettings,
@@ -259,5 +316,7 @@ module.exports = {
   saveBookings,
   addBooking,
   updateBooking,
-  deleteBooking
+  deleteBooking,
+  getFormConfig,
+  saveFormConfig
 };
