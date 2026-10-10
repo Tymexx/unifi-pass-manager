@@ -23,6 +23,34 @@ app.get('/api/settings', (req, res) => {
 
 // API: Save global settings
 app.post('/api/settings', (req, res) => {
+app.post('/api/settings/test-email', async (req, res) => {
+  try {
+    const settings = req.body;
+    if (!settings.smtpHost || !settings.smtpUser || !settings.smtpPass) {
+      return res.status(400).json({ success: false, error: 'Missing SMTP settings' });
+    }
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: settings.smtpHost,
+      port: parseInt(settings.smtpPort) || 587,
+      secure: parseInt(settings.smtpPort) === 465,
+      auth: {
+        user: settings.smtpUser,
+        pass: settings.smtpPass
+      }
+    });
+    const from = settings.smtpFrom || settings.smtpUser;
+    await transporter.sendMail({
+      from: `"Bastion Test" <${from}>`,
+      to: settings.globalAdminEmail || settings.smtpUser,
+      subject: "Bastion: Test Email",
+      text: "If you are reading this, your SMTP configuration is working perfectly!"
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
   const newSettings = req.body;
   const updatedSettings = saveSettings(newSettings);
   
