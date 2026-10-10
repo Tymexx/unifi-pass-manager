@@ -31,7 +31,7 @@ async function sendEmailNotification(to, subject, text, html) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"UniFi Pass Manager" <${from}>`,
+      from: `"Bastion" <${from}>`,
       to,
       subject,
       text,
@@ -104,22 +104,39 @@ async function sendClientEmail(emails, network, newPassword, eventTitle) {
   
   if (emailList.length === 0) return;
 
-  const subject = `Wi-Fi Access for: ${eventTitle}`;
+  const wifiString = `WIFI:S:${network.ssidName || network.name};T:WPA;P:${newPassword};;`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(wifiString)}`;
+
+  const subject = `Bastion: Wi-Fi Credentials for ${eventTitle}`;
   const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-      <h2 style="color: #0f172a;">Your Wi-Fi Access is Ready</h2>
-      <p>Hello,</p>
-      <p>The Wi-Fi credentials for your scheduled event "<strong>${eventTitle}</strong>" are now active.</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+        <h2 style="color: #0086d6; margin: 0; font-size: 1.4rem;">Bastion Wi-Fi Access</h2>
+      </div>
+      <p style="font-size: 1rem; color: #f3f4f6;">Hello,</p>
+      <p style="color: #949da8; line-height: 1.6;">Your secure Wi-Fi credentials for <strong>${eventTitle}</strong> are ready. You can join the network manually or scan the QR code below.</p>
       
-      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 5px 0;"><strong>Network Name (SSID):</strong> ${network.ssidName || network.name}</p>
-        <p style="margin: 5px 0;"><strong>Password:</strong> <span style="font-family: monospace; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${newPassword}</span></p>
+      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #222834; margin: 20px 0; text-align: center;">
+        <div style="margin-bottom: 12px; text-align: left;">
+          <strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Network Name (SSID):</strong>
+          <div style="color: #fff; font-size: 1.1rem; font-weight: 600; margin-top: 4px;">${network.ssidName || network.name}</div>
+        </div>
+        <div style="margin-bottom: 16px; text-align: left;">
+          <strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Password / Key:</strong>
+          <div style="color: #0086d6; font-family: monospace; font-size: 1.25rem; font-weight: 700; background: #151921; padding: 10px 14px; border-radius: 6px; border: 1px solid #222834; margin-top: 4px; word-break: break-all;">${newPassword}</div>
+        </div>
+        <div style="background: #ffffff; display: inline-block; padding: 14px; border-radius: 8px; margin-top: 10px;">
+          <img src="${qrUrl}" alt="Wi-Fi QR Code" width="180" height="180" style="display: block;" />
+        </div>
+        <p style="color: #5e6774; font-size: 0.8rem; margin: 8px 0 0 0;">Scan with your device camera to connect immediately</p>
       </div>
       
-      <p style="color: #64748b; font-size: 0.9em;">These credentials will remain active for the duration of your schedule.</p>
+      <p style="color: #5e6774; font-size: 0.85rem; margin-top: 24px; border-top: 1px solid #222834; padding-top: 16px;">
+        For security, these credentials are tied to your scheduled booking and will expire automatically when the session ends.
+      </p>
     </div>
   `;
-  const text = `Hello,\n\nThe Wi-Fi credentials for your scheduled event "${eventTitle}" are now active.\n\nNetwork Name (SSID): ${network.ssidName || network.name}\nPassword: ${newPassword}\n\nThese credentials will remain active for the duration of your schedule.`;
+  const text = `Hello,\n\nYour Wi-Fi credentials for ${eventTitle} are ready:\n\nNetwork (SSID): ${network.ssidName || network.name}\nPassword: ${newPassword}\n\nScan the QR code or enter the password on your device. Credentials will expire when the session ends.`;
 
   // Send to all clients using Bcc so they don't see each other's emails
   const bccList = emailList.join(', ');
@@ -131,7 +148,7 @@ async function sendClientEmail(emails, network, newPassword, eventTitle) {
   
   try {
     const info = await transporter.sendMail({
-      from: `"UniFi Pass Manager" <${from}>`,
+      from: `"Bastion" <${from}>`,
       to: from, // Send to self
       bcc: bccList, // BCC the clients
       subject,
@@ -144,7 +161,93 @@ async function sendClientEmail(emails, network, newPassword, eventTitle) {
   }
 }
 
+async function sendBookingReceivedCustomerEmail(booking) {
+  const subject = `Bastion: Access Request Received (${booking.company || booking.name})`;
+  const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+        <h2 style="color: #0086d6; margin: 0; font-size: 1.4rem;">Bastion Wi-Fi Access</h2>
+      </div>
+      <p style="font-size: 1rem; color: #f3f4f6;">Hello <strong>${booking.name}</strong>,</p>
+      <p style="color: #949da8; line-height: 1.6;">Thank you for your request. Your booking is currently <strong>under administrative review</strong>. Once confirmed, your scheduled credentials will be prepared.</p>
+      
+      <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 24px 0;">
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Event / Organization:</strong> <span style="color: #fff;">${booking.company || 'Not Specified'}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Scheduled Date:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
+        <div><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Status:</strong> <span style="color: #f59e0b; font-weight: 600;">Pending Review</span></div>
+      </div>
+      
+      <p style="color: #5e6774; font-size: 0.85rem; margin-top: 24px; border-top: 1px solid #222834; padding-top: 16px;">
+        You will receive a confirmation email once your access window is approved.
+      </p>
+    </div>
+  `;
+  const text = `Hello ${booking.name},\n\nThank you for your request. Your Wi-Fi booking is currently under review.\n\nDate: ${booking.date} at ${booking.time}\nDuration: ${durationText}\nStatus: Pending Review\n\nYou will receive a confirmation email once approved.`;
+  return sendEmailNotification(booking.email, subject, text, html);
+}
+
+async function sendBookingAdminAlertEmail(booking) {
+  const settings = getSettings();
+  const adminEmail = settings.bookingAlertEmail || settings.globalAdminEmail || settings.smtpUser;
+  if (!adminEmail) return false;
+
+  const subject = `[Bastion Alert] New Wi-Fi Request: ${booking.name} (${booking.company || 'Guest'})`;
+  const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
+      <h2 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 1.3rem;">New Wi-Fi Access Request</h2>
+      <p style="color: #949da8;">A new guest access request has been submitted through your booking embed widget:</p>
+      
+      <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 20px 0;">
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Guest Name:</strong> <span style="color: #fff;">${booking.name}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Guest Email:</strong> <span style="color: #fff;">${booking.email}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Company / Event:</strong> <span style="color: #fff;">${booking.company || 'N/A'}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Start Time:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Preferred Network:</strong> <span style="color: #fff;">${booking.requestedNetworkName || 'Any / Auto-Assign'}</span></div>
+        <div><strong style="color: #949da8;">Delivery Timing:</strong> <span style="color: #fff;">${booking.sendTiming || 'Standard'}</span></div>
+      </div>
+      
+      <p style="color: #949da8; font-size: 0.9rem;">
+        Log into your Bastion dashboard at <a href="https://bastion.directconnect.global/bookings" style="color: #0086d6;">bastion.directconnect.global/bookings</a> to review and approve this request.
+      </p>
+    </div>
+  `;
+  const text = `New Wi-Fi Request Received:\n\nGuest: ${booking.name} (${booking.email})\nCompany: ${booking.company || 'N/A'}\nWhen: ${booking.date} at ${booking.time}\nDuration: ${durationText}\n\nReview at https://bastion.directconnect.global/bookings`;
+  return sendEmailNotification(adminEmail, subject, text, html);
+}
+
+async function sendBookingApprovedEmail(booking, networkName) {
+  const subject = `Bastion: Wi-Fi Access Confirmed for ${booking.company || booking.name}`;
+  const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
+      <h2 style="color: #10b981; margin: 0 0 16px 0; font-size: 1.4rem;">Booking Confirmed</h2>
+      <p style="font-size: 1rem; color: #f3f4f6;">Hello <strong>${booking.name}</strong>,</p>
+      <p style="color: #949da8; line-height: 1.6;">Your Wi-Fi access request has been <strong>approved</strong>. We have provisioned your dedicated access slot.</p>
+      
+      <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 24px 0;">
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Network:</strong> <span style="color: #fff; font-weight: 600;">${networkName}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Scheduled Date:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Access Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
+        <div><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Delivery Notice:</strong> <span style="color: #0086d6; font-weight: 500;">Your unique secure passphrase and connection QR code will be dispatched to this email address automatically prior to your meeting.</span></div>
+      </div>
+      
+      <p style="color: #5e6774; font-size: 0.85rem; margin-top: 24px; border-top: 1px solid #222834; padding-top: 16px;">
+        For security, credentials are automatically rotated and deactivated once your ${durationText} meeting duration concludes.
+      </p>
+    </div>
+  `;
+  const text = `Hello ${booking.name},\n\nYour Wi-Fi access request for ${networkName} is approved!\n\nDate: ${booking.date} at ${booking.time}\nDuration: ${durationText}\n\nYour unique passphrase and QR code will be dispatched to your email automatically prior to your meeting.`;
+  return sendEmailNotification(booking.email, subject, text, html);
+}
+
 module.exports = {
   sendGlobalNotification,
-  sendClientEmail
+  sendClientEmail,
+  sendBookingReceivedCustomerEmail,
+  sendBookingAdminAlertEmail,
+  sendBookingApprovedEmail
 };

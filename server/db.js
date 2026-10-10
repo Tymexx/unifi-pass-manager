@@ -64,6 +64,12 @@ function readDb() {
       mutated = true;
     }
 
+    // Ensure bookings array exists
+    if (!data.bookings) {
+      data.bookings = [];
+      mutated = true;
+    }
+
     // Migrate per-network password policy
     if (data.networks && Array.isArray(data.networks)) {
       data.networks.forEach(net => {
@@ -192,6 +198,54 @@ function deleteNetwork(id) {
   }
 }
 
+function getBookings() {
+  return readDb().bookings || [];
+}
+
+function saveBookings(newBookings) {
+  const data = readDb();
+  data.bookings = newBookings.map(b => ({
+    ...b,
+    id: b.id || uuidv4()
+  }));
+  writeDb(data);
+  return data.bookings;
+}
+
+function addBooking(booking) {
+  const data = readDb();
+  if (!data.bookings) data.bookings = [];
+  const newBooking = {
+    ...booking,
+    id: booking.id || uuidv4(),
+    status: booking.status || 'pending',
+    createdAt: booking.createdAt || new Date().toISOString()
+  };
+  data.bookings.unshift(newBooking); // newest first
+  writeDb(data);
+  return newBooking;
+}
+
+function updateBooking(id, updates) {
+  const data = readDb();
+  if (!data.bookings) return null;
+  const index = data.bookings.findIndex(b => b.id === id);
+  if (index !== -1) {
+    data.bookings[index] = { ...data.bookings[index], ...updates };
+    writeDb(data);
+    return data.bookings[index];
+  }
+  return null;
+}
+
+function deleteBooking(id) {
+  const data = readDb();
+  if (data.bookings) {
+    data.bookings = data.bookings.filter(b => b.id !== id);
+    writeDb(data);
+  }
+}
+
 module.exports = {
   getSettings,
   saveSettings,
@@ -200,5 +254,10 @@ module.exports = {
   updateNetworkPassword,
   getEvents,
   saveEvents,
-  deleteNetwork
+  deleteNetwork,
+  getBookings,
+  saveBookings,
+  addBooking,
+  updateBooking,
+  deleteBooking
 };

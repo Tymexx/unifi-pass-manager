@@ -3,8 +3,19 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const { getSettings, saveSettings, getNetworks, saveNetworks, getEvents, saveEvents, deleteNetwork } = require('./db');
+const { 
+  getSettings, saveSettings, 
+  getNetworks, saveNetworks, 
+  getEvents, saveEvents, deleteNetwork,
+  getBookings, saveBookings, addBooking, updateBooking, deleteBooking 
+} = require('./db');
 const { startScheduler, restartScheduler, rotatePasswords } = require('./scheduler');
+const { 
+  sendBookingReceivedCustomerEmail, 
+  sendBookingAdminAlertEmail, 
+  sendBookingApprovedEmail 
+} = require('./notifications');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3050;
@@ -78,6 +89,22 @@ app.post('/api/networks', (req, res) => {
   res.json(updatedNetworks);
 });
 
+// API: Get sanitized networks for public embed form (no passwords exposed)
+app.get('/api/public/networks', (req, res) => {
+  try {
+    const publicNetworks = getNetworks()
+      .filter(n => n.enabled !== false)
+      .map(n => ({
+        id: n.id,
+        name: n.name,
+        ssidName: n.ssidName || n.name
+      }));
+    res.json(publicNetworks);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // API: Get all networks (for Display component)
 app.get('/api/networks', (req, res) => {
   res.json(getNetworks());
@@ -119,6 +146,187 @@ app.post('/api/rotate', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// API: Get all bookings & pending count
+app.get('/api/bookings', (req, res) => {
+  try {
+    const bookings = getBookings();
+    const pendingCount = bookings.filter(b => b.status === 'pending').length;
+    res.json({ bookings, pendingCount });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Submit a new booking request (Customer Embed Form)
+app.post('/api/bookings', async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      company,
+      date,
+      time,
+      durationHours,
+      durationMinutes,
+      requestedNetworkId,
+      requestedNetworkName,
+      sendTiming
+    } = req.body;
+
+    if (!name || !email || !date || !time) {
+      return res.status(400).json({ success: false, error: 'Name, email, date, and time are required.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
+    }
+
+    const booking = addBooking({
+      name: name.trim(),
+      email: email.trim(),
+      company: (company || '').trim(),
+      date,
+      time,
+      durationHours: parseInt(durationHours, 10) || 1,
+      durationMinutes: parseInt(durationMinutes, 10) || 0,
+      requestedNetworkId: requestedNetworkId || 'any',
+      requestedNetworkName: requestedNetworkName || 'Any / Auto-Assign',
+      sendTiming: sendTiming || '1h',
+      status: 'pending'
+    });
+
+    // Send thank-you / under-review receipt to customer
+    sendBookingReceivedCustomerEmail(booking)
+      .catch(err => console.error('Booking customer email error:', err.message));
+
+    // Send instant alert email to administrator
+    sendBookingAdminAlertEmail(booking)
+      .catch(err => console.error('Booking admin alert email error:', err.message));
+
+    res.json({ success: true, booking });
+  } catch (err) {
+    console.error('Failed to create booking:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Approve a booking request
+app.post('/api/bookings/:id/approve', async (req, res) => {
+  try {
+    const { assignedNetworkId } = req.body;
+    const bookings = getBookings();
+    const booking = bookings.find(b => b.id === req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking not found.' });
+    }
+
+    const networks = getNetworks();
+    let targetNetwork = networks.find(n => n.id === assignedNetworkId);
+    if (!targetNetwork && booking.requestedNetworkId && booking.requestedNetworkId !== 'any') {
+      targetNetwork = networks.find(n => n.id === booking.requestedNetworkId);
+    }
+    if (!targetNetwork) {
+      targetNetwork = networks[0];
+    }
+
+    if (!targetNetwork) {
+      return res.status(400).json({ success: false, error: 'No Wi-Fi networks available to assign.' });
+    }
+
+    // Update booking state
+    const updatedBooking = updateBooking(booking.id, {
+      status: 'approved',
+      assignedNetworkId: targetNetwork.id,
+      assignedNetworkName: targetNetwork.name,
+      approvedAt: new Date().toISOString()
+    });
+
+    // Compute pre-send delivery timing for scheduler (Option B)
+    let sendTimingConfig = 'standard';
+    let emailSendDate = null;
+    let emailSendTime = null;
+
+    if (booking.sendTiming === '1h' || booking.sendTiming === '24h') {
+      const offsetHours = booking.sendTiming === '24h' ? 24 : 1;
+      const [hour, minute] = booking.time.split(':').map(Number);
+      const [year, month, day] = booking.date.split('-').map(Number);
+      const startDateTime = new Date(year, month - 1, day, hour, minute, 0);
+      const preSendDateTime = new Date(startDateTime.getTime() - offsetHours * 60 * 60 * 1000);
+
+      if (preSendDateTime > new Date()) {
+        sendTimingConfig = 'custom';
+        const pYear = preSendDateTime.getFullYear();
+        const pMonth = String(preSendDateTime.getMonth() + 1).padStart(2, '0');
+        const pDay = String(preSendDateTime.getDate()).padStart(2, '0');
+        const pHour = String(preSendDateTime.getHours()).padStart(2, '0');
+        const pMin = String(preSendDateTime.getMinutes()).padStart(2, '0');
+        emailSendDate = `${pYear}-${pMonth}-${pDay}`;
+        emailSendTime = `${pHour}:${pMin}`;
+      }
+    }
+
+    // Provision scheduled calendar event
+    const newEvent = {
+      id: uuidv4(),
+      title: `Guest Access: ${booking.company || booking.name}`,
+      networkId: targetNetwork.id,
+      type: 'one-off',
+      date: booking.date,
+      time: booking.time,
+      revokeAccess: true,
+      revokeHours: parseInt(booking.durationHours || 1, 10),
+      revokeMinutes: parseInt(booking.durationMinutes || 0, 10),
+      clientEmails: booking.email,
+      sendTiming: sendTimingConfig,
+      emailSendDate: emailSendDate,
+      emailSendTime: emailSendTime,
+      bookingId: booking.id
+    };
+
+    const currentEvents = getEvents();
+    saveEvents([...currentEvents, newEvent]);
+    restartScheduler();
+
+    // Send Option B approval confirmation email to customer
+    sendBookingApprovedEmail(updatedBooking, targetNetwork.ssidName || targetNetwork.name)
+      .catch(err => console.error('Booking approval email error:', err.message));
+
+    res.json({ success: true, booking: updatedBooking, event: newEvent });
+  } catch (err) {
+    console.error('Failed to approve booking:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Reject a booking request
+app.post('/api/bookings/:id/reject', (req, res) => {
+  try {
+    const { reason } = req.body;
+    const updatedBooking = updateBooking(req.params.id, {
+      status: 'rejected',
+      rejectReason: reason || 'Not approved',
+      rejectedAt: new Date().toISOString()
+    });
+    if (!updatedBooking) {
+      return res.status(404).json({ success: false, error: 'Booking not found.' });
+    }
+    res.json({ success: true, booking: updatedBooking });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Delete a booking
+app.delete('/api/bookings/:id', (req, res) => {
+  try {
+    deleteBooking(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
