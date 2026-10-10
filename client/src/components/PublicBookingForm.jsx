@@ -253,7 +253,7 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
 
   if (loadingConfig) {
     return (
-      <div className="public-booking-container">
+      <div className={`public-booking-container ${isPreview ? 'is-preview' : ''}`}>
         <div className="public-booking-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
           <Loader2 size={32} className="animate-spin" color="var(--primary)" style={{ margin: '0 auto 12px auto' }} />
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>Loading booking form...</p>
@@ -266,7 +266,7 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
     const isWifi = submittedBooking.requireInternet !== false;
     const durationText = `${submittedBooking.durationHours || 1}h ${submittedBooking.durationMinutes ? `${submittedBooking.durationMinutes}m` : ''}`.trim();
     return (
-      <div className="public-booking-container">
+      <div className={`public-booking-container ${isPreview ? 'is-preview' : ''}`}>
         <div className="public-booking-card animate-in">
           <div className="public-booking-success-icon">
             <CheckCircle2 size={48} color="#22c55e" />
@@ -379,7 +379,7 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
   };
 
   return (
-    <div className="public-booking-container">
+    <div className={`public-booking-container ${isPreview ? 'is-preview' : ''}`}>
       <div className="public-booking-card animate-in" style={cardStyle}>
         <div className="public-booking-header">
           <div className="public-booking-brand">

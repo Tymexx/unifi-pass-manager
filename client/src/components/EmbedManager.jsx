@@ -551,7 +551,7 @@ export default function EmbedManager() {
   const approvedCount = bookings.filter(b => b.status === 'approved').length;
 
   return (
-    <div className="animate-in">
+    <div className="animate-in embed-manager-page">
       <div className="page-header" style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
@@ -837,7 +837,7 @@ export default function EmbedManager() {
 
       {/* TAB 2: FORM BUILDER */}
       {activeTab === 'builder' && formConfig && (
-        <div className="builder-split-grid" style={{ display: 'grid', gridTemplateColumns: previewTab ? 'minmax(0, 1fr) minmax(340px, 420px)' : '1fr', gap: '20px' }}>
+        <div className="builder-split-grid" style={{ display: 'grid', gridTemplateColumns: previewTab ? 'minmax(0, 1fr) minmax(480px, 540px)' : '1fr', gap: '24px', alignItems: 'start' }}>
           <div>
             {/* Top Toolbar */}
             <div className="card" style={{ marginBottom: '20px', padding: '16px 20px' }}>
@@ -1001,7 +1001,7 @@ export default function EmbedManager() {
                         <span 
                           className="badge" 
                           title={`Field Type: ${field.type}`}
-                          style={{ fontSize: '0.68rem', padding: '2px 7px', textTransform: 'none', flexShrink: 0, background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}
+                          style={{ fontSize: '0.68rem', padding: '2px 7px', textTransform: 'none', flexShrink: 0, background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)', cursor: 'default' }}
                         >
                           {getFieldTypeLabel(field.type)}
                         </span>
@@ -1020,7 +1020,7 @@ export default function EmbedManager() {
                               alignItems: 'center', 
                               justifyContent: 'center', 
                               flexShrink: 0,
-                              cursor: 'help'
+                              cursor: 'default'
                             }}
                           >
                             <Asterisk size={13} strokeWidth={2.5} />
@@ -1041,7 +1041,7 @@ export default function EmbedManager() {
                               alignItems: 'center', 
                               justifyContent: 'center', 
                               flexShrink: 0,
-                              cursor: 'help'
+                              cursor: 'default'
                             }}
                           >
                             <Lock size={11} />
@@ -1062,7 +1062,7 @@ export default function EmbedManager() {
                               alignItems: 'center', 
                               justifyContent: 'center', 
                               flexShrink: 0,
-                              cursor: 'help'
+                              cursor: 'default'
                             }}
                           >
                             <GitBranch size={11} />
@@ -1360,10 +1360,12 @@ export default function EmbedManager() {
                   <span style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Eye size={16} color="var(--primary)" /> Real-Time Form Preview
                   </span>
-                  <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>Interactive Demo</span>
+                  <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>Interactive Demo (1:1 Live Scale)</span>
                 </div>
-                <div style={{ background: '#070a12', borderRadius: '10px', padding: '16px', maxHeight: '780px', overflowY: 'auto' }}>
-                  <PublicBookingForm overrideConfig={formConfig} isPreview={true} />
+                <div style={{ background: '#070a12', borderRadius: '10px', padding: '16px', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', maxWidth: '480px' }}>
+                    <PublicBookingForm overrideConfig={formConfig} isPreview={true} />
+                  </div>
                 </div>
               </div>
             </div>
