@@ -190,8 +190,8 @@ async function sendBookingReceivedCustomerEmail(booking) {
 
 async function sendBookingAdminAlertEmail(booking) {
   const settings = getSettings();
-  const adminEmail = settings.bookingAlertEmail || settings.globalAdminEmail || settings.smtpUser;
-  if (!adminEmail) return false;
+  const adminEmail = settings.bookingAlertEmail || settings.globalAdminEmail || settings.testEmailRecipient;
+  if (!adminEmail || !adminEmail.includes('@')) return false;
 
   const subject = `[Bastion Alert] New Wi-Fi Request: ${booking.name} (${booking.company || 'Guest'})`;
   const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
