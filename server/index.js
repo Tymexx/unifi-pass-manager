@@ -14,7 +14,8 @@ const { startScheduler, restartScheduler, rotatePasswords } = require('./schedul
 const { 
   sendBookingReceivedCustomerEmail, 
   sendBookingAdminAlertEmail, 
-  sendBookingApprovedEmail 
+  sendBookingApprovedEmail,
+  sendBookingVisitApprovedEmail
 } = require('./notifications');
 const { v4: uuidv4 } = require('uuid');
 
@@ -217,6 +218,7 @@ app.post('/api/bookings', async (req, res) => {
       requestedNetworkId,
       requestedNetworkName,
       sendTiming,
+      requireInternet,
       customFields
     } = req.body;
 
@@ -238,6 +240,7 @@ app.post('/api/bookings', async (req, res) => {
       time,
       durationHours: parseInt(durationHours, 10) || 1,
       durationMinutes: parseInt(durationMinutes, 10) || 0,
+      requireInternet: requireInternet !== undefined ? Boolean(requireInternet) : true,
       requestedNetworkId: requestedNetworkId || 'any',
       requestedNetworkName: requestedNetworkName || 'Any / Auto-Assign',
       sendTiming: sendTiming || '1h',
@@ -268,6 +271,20 @@ app.post('/api/bookings/:id/approve', async (req, res) => {
     const booking = bookings.find(b => b.id === req.params.id);
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found.' });
+    }
+
+    // Non-internet booking flow: Facility visit only, no Wi-Fi credentials or scheduler event
+    if (booking.requireInternet === false) {
+      const updatedBooking = updateBooking(booking.id, {
+        status: 'approved',
+        requireInternet: false,
+        approvedAt: new Date().toISOString()
+      });
+
+      sendBookingVisitApprovedEmail(updatedBooking)
+        .catch(err => console.error('Booking visit approval email error:', err.message));
+
+      return res.json({ success: true, booking: updatedBooking, event: null });
     }
 
     const networks = getNetworks();

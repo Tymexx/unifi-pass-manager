@@ -57,8 +57,9 @@ const defaultData = {
       { id: 'date', type: 'date', label: 'Visit Date', required: true, isSystem: true, locked: true },
       { id: 'time', type: 'time', label: 'Start Time', required: true, isSystem: true, locked: true },
       { id: 'duration', type: 'duration', label: 'Access Duration', required: true, isSystem: true, locked: true },
-      { id: 'network', type: 'network_select', label: 'Preferred Network', required: false, isSystem: true, locked: false },
-      { id: 'sendTiming', type: 'timing_select', label: 'When should your password be delivered?', required: true, isSystem: true, locked: false }
+      { id: 'requireInternet', type: 'checkbox', label: 'Do you require internet access?', defaultValue: true, required: false, isSystem: true, locked: true },
+      { id: 'network', type: 'network_select', label: 'Preferred Network', required: false, isSystem: true, locked: false, condition: { fieldId: 'requireInternet', showWhen: true } },
+      { id: 'sendTiming', type: 'timing_select', label: 'When should your password be delivered?', required: true, isSystem: true, locked: false, condition: { fieldId: 'requireInternet', showWhen: true } }
     ]
   }
 };
@@ -92,6 +93,35 @@ function readDb() {
     if (!data.formConfig || !Array.isArray(data.formConfig.fields)) {
       data.formConfig = defaultFormConfig;
       mutated = true;
+    } else {
+      // Migrate requireInternet field and conditions if missing
+      const fields = data.formConfig.fields;
+      const hasRequireInternet = fields.some(f => f.id === 'requireInternet');
+      if (!hasRequireInternet) {
+        const reqField = {
+          id: 'requireInternet',
+          type: 'checkbox',
+          label: 'Do you require internet access?',
+          defaultValue: true,
+          required: false,
+          isSystem: true,
+          locked: true
+        };
+        const durationIdx = fields.findIndex(f => f.id === 'duration');
+        if (durationIdx !== -1) {
+          fields.splice(durationIdx + 1, 0, reqField);
+        } else {
+          fields.push(reqField);
+        }
+        mutated = true;
+      }
+
+      fields.forEach(f => {
+        if ((f.id === 'network' || f.id === 'sendTiming') && !f.condition) {
+          f.condition = { fieldId: 'requireInternet', showWhen: true };
+          mutated = true;
+        }
+      });
     }
 
     // Migrate per-network password policy
@@ -280,7 +310,7 @@ function saveFormConfig(config) {
   
   // Guarantee system locked fields are not removed
   const existingFields = (config && Array.isArray(config.fields)) ? config.fields : defaultFormConfig.fields;
-  const lockedFieldIds = ['name', 'email', 'date', 'time', 'duration'];
+  const lockedFieldIds = ['name', 'email', 'date', 'time', 'duration', 'requireInternet'];
   
   const currentFieldIds = existingFields.map(f => f.id);
   const verifiedFields = [...existingFields];

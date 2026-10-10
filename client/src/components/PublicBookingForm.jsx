@@ -73,6 +73,19 @@ function IosNumberWheel({ value, onChange, min = 1, max = 50, step = 1, label })
   );
 }
 
+// Helper: Determine whether a field is visible based on conditional logic
+function isFieldVisible(field, values) {
+  if (!field || !field.condition || !field.condition.fieldId) return true;
+  const triggerVal = values[field.condition.fieldId];
+  if (typeof field.condition.showWhen === 'boolean') {
+    return Boolean(triggerVal) === field.condition.showWhen;
+  }
+  if (field.condition.showWhen !== undefined) {
+    return String(triggerVal ?? '') === String(field.condition.showWhen);
+  }
+  return true;
+}
+
 export default function PublicBookingForm({ overrideConfig = null, isPreview = false }) {
   const [formConfig, setFormConfig] = useState(overrideConfig);
   const [loadingConfig, setLoadingConfig] = useState(!overrideConfig);
@@ -126,14 +139,17 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
       time: '09:00',
       durationHours: '2',
       durationMinutes: '0',
+      requireInternet: true,
       network: 'any',
       sendTiming: '1h'
     };
     fields.forEach(f => {
-      if (f.type === 'number') {
-        defaults[f.id] = f.defaultValue !== undefined ? f.defaultValue : 1;
+      if (f.id === 'requireInternet') {
+        defaults[f.id] = f.defaultValue !== undefined ? Boolean(f.defaultValue) : true;
+      } else if (f.type === 'number') {
+        defaults[f.id] = f.defaultValue !== undefined ? f.defaultValue : (f.min || 1);
       } else if (f.type === 'checkbox') {
-        defaults[f.id] = false;
+        defaults[f.id] = f.defaultValue !== undefined ? Boolean(f.defaultValue) : false;
       } else if (f.type === 'select' && f.options && f.options.length > 0) {
         defaults[f.id] = f.options[0];
       }
@@ -155,8 +171,9 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
 
     const fields = formConfig?.fields || [];
 
-    // Validate required fields
+    // Validate required fields (only if currently visible!)
     for (const f of fields) {
+      if (!isFieldVisible(f, fieldValues)) continue;
       if (f.required) {
         const val = fieldValues[f.id];
         if (f.type === 'checkbox') {
@@ -182,17 +199,20 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
     setError(null);
 
     try {
+      const requiresWifi = fieldValues.requireInternet !== undefined ? Boolean(fieldValues.requireInternet) : true;
       const selectedNet = networks.find(n => n.id === fieldValues.network);
-      const requestedNetworkName = fieldValues.network === 'any' || !fieldValues.network
-        ? 'Any / Auto-Assign'
-        : (selectedNet ? `${selectedNet.name} (${selectedNet.ssidName})` : 'Specific Network');
+      const requestedNetworkName = !requiresWifi
+        ? 'Not Required (Facility Visit Only)'
+        : (fieldValues.network === 'any' || !fieldValues.network
+            ? 'Any / Auto-Assign'
+            : (selectedNet ? `${selectedNet.name} (${selectedNet.ssidName})` : 'Specific Network'));
 
       // Separate standard fields from custom dynamic fields
-      const standardKeys = ['name', 'email', 'phone', 'company', 'date', 'time', 'durationHours', 'durationMinutes', 'network', 'sendTiming'];
+      const standardKeys = ['name', 'email', 'phone', 'company', 'date', 'time', 'durationHours', 'durationMinutes', 'requireInternet', 'network', 'sendTiming'];
       const customFields = {};
 
       fields.forEach(f => {
-        if (!standardKeys.includes(f.id) && f.id !== 'duration') {
+        if (!standardKeys.includes(f.id) && f.id !== 'duration' && isFieldVisible(f, fieldValues)) {
           customFields[f.label || f.id] = fieldValues[f.id];
         }
       });
@@ -206,9 +226,10 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
         time: fieldValues.time || '09:00',
         durationHours: parseInt(fieldValues.durationHours, 10) || 2,
         durationMinutes: parseInt(fieldValues.durationMinutes, 10) || 0,
-        requestedNetworkId: fieldValues.network || 'any',
+        requireInternet: requiresWifi,
+        requestedNetworkId: requiresWifi ? (fieldValues.network || 'any') : 'none',
         requestedNetworkName,
-        sendTiming: fieldValues.sendTiming || '1h',
+        sendTiming: requiresWifi ? (fieldValues.sendTiming || '1h') : 'none',
         customFields
       };
 
@@ -242,6 +263,7 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
   }
 
   if (submittedBooking) {
+    const isWifi = submittedBooking.requireInternet !== false;
     const durationText = `${submittedBooking.durationHours || 1}h ${submittedBooking.durationMinutes ? `${submittedBooking.durationMinutes}m` : ''}`.trim();
     return (
       <div className="public-booking-container">
@@ -251,10 +273,10 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
           </div>
 
           <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '12px 0 6px 0', color: '#f1f5f9', textAlign: 'center' }}>
-            {formConfig?.successTitle || 'Request Received'}
+            {formConfig?.successTitle || (isWifi ? 'Request Received' : 'Visit Request Received')}
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-            Thank you, <strong>{submittedBooking.name}</strong>. Your Wi-Fi booking has been sent for administrative review. A confirmation receipt was dispatched to <strong>{submittedBooking.email}</strong>.
+            Thank you, <strong>{submittedBooking.name}</strong>. Your {isWifi ? 'Wi-Fi' : 'visit'} booking has been sent for administrative review. A confirmation receipt was dispatched to <strong>{submittedBooking.email}</strong>.
           </p>
 
           <div className="public-booking-summary">
@@ -272,20 +294,30 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
                 <span className="summary-value">{submittedBooking.phone}</span>
               </div>
             )}
-            <div className="summary-item">
-              <span className="summary-label"><Wifi size={14} /> Target Network</span>
-              <span className="summary-value">{submittedBooking.requestedNetworkName || 'Auto-Assign'}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label"><Mail size={14} /> Passphrase Delivery</span>
-              <span className="summary-value">
-                {submittedBooking.sendTiming === '24h' 
-                  ? '24 hours before meeting' 
-                  : submittedBooking.sendTiming === 'start' 
-                    ? 'At meeting start' 
-                    : '1 hour before meeting'}
-              </span>
-            </div>
+
+            {isWifi ? (
+              <>
+                <div className="summary-item">
+                  <span className="summary-label"><Wifi size={14} /> Target Network</span>
+                  <span className="summary-value">{submittedBooking.requestedNetworkName || 'Auto-Assign'}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label"><Mail size={14} /> Passphrase Delivery</span>
+                  <span className="summary-value">
+                    {submittedBooking.sendTiming === '24h' 
+                      ? '24 hours before meeting' 
+                      : submittedBooking.sendTiming === 'start' 
+                        ? 'At meeting start' 
+                        : '1 hour before meeting'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="summary-item">
+                <span className="summary-label"><Shield size={14} /> Internet Access</span>
+                <span className="summary-value" style={{ color: 'var(--text-secondary)' }}>Not Requested (Facility Visit Only)</span>
+              </div>
+            )}
 
             {/* Custom dynamic fields */}
             {submittedBooking.customFields && Object.entries(submittedBooking.customFields).map(([label, val]) => (
@@ -299,7 +331,9 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
           <div className="public-booking-notice">
             <Shield size={16} color="#0086d6" style={{ flexShrink: 0, marginTop: 2 }} />
             <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>
-              Once your request is approved by the admin, your dedicated Wi-Fi access passphrase and instant connect QR code will arrive directly in your inbox.
+              {isWifi 
+                ? 'Once your request is approved by the admin, your dedicated Wi-Fi access passphrase and instant connect QR code will arrive directly in your inbox.'
+                : 'Your facility visit booking has been logged with reception. No Wi-Fi credentials or access passphrases will be generated.'}
             </div>
           </div>
 
@@ -345,6 +379,9 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
 
         <form onSubmit={handleSubmit} className="public-booking-form">
           {fields.map((field) => {
+            if (!isFieldVisible(field, fieldValues)) {
+              return null;
+            }
             const { id, type, label, placeholder, required, options } = field;
             const value = fieldValues[id] ?? '';
 

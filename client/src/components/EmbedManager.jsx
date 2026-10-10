@@ -222,8 +222,9 @@ export default function EmbedManager() {
         { id: 'date', type: 'date', label: 'Visit Date', required: true, isSystem: true, locked: true },
         { id: 'time', type: 'time', label: 'Start Time', required: true, isSystem: true, locked: true },
         { id: 'duration', type: 'duration', label: 'Access Duration', required: true, isSystem: true, locked: true },
-        { id: 'network', type: 'network_select', label: 'Preferred Network', required: false, isSystem: true, locked: false },
-        { id: 'sendTiming', type: 'timing_select', label: 'When should your password be delivered?', required: true, isSystem: true, locked: false }
+        { id: 'requireInternet', type: 'checkbox', label: 'Do you require internet access?', defaultValue: true, required: false, isSystem: true, locked: true },
+        { id: 'network', type: 'network_select', label: 'Preferred Network', required: false, isSystem: true, locked: false, condition: { fieldId: 'requireInternet', showWhen: true } },
+        { id: 'sendTiming', type: 'timing_select', label: 'When should your password be delivered?', required: true, isSystem: true, locked: false, condition: { fieldId: 'requireInternet', showWhen: true } }
       ];
       const resetConfig = {
         title: 'Guest Wi-Fi Booking',
@@ -480,13 +481,18 @@ export default function EmbedManager() {
                   <div key={booking.id} className="card" style={{ padding: '18px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                       <div style={{ flex: '1 1 300px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
                             {booking.name}
                           </span>
                           {booking.status === 'pending' && <span className="badge badge-warning">Pending Review</span>}
                           {booking.status === 'approved' && <span className="badge badge-success">Approved</span>}
                           {booking.status === 'rejected' && <span className="badge badge-danger">Rejected</span>}
+                          {booking.requireInternet === false && (
+                            <span className="badge" style={{ background: 'rgba(148, 163, 184, 0.15)', color: '#cbd5e1', border: '1px solid rgba(148, 163, 184, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px', textTransform: 'none' }}>
+                              <Building size={12} /> Facility Visit (No Wi-Fi)
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -511,32 +517,41 @@ export default function EmbedManager() {
                           </span>
                         </div>
 
-                        <div style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
-                          <span>
-                            <strong>Preferred Network:</strong>{' '}
-                            <span style={{ color: 'var(--text-primary)' }}>
-                              {booking.requestedNetworkName || 'Any / Auto-Assign'}
-                            </span>
-                          </span>
-                          {booking.assignedNetworkName && (
+                        {booking.requireInternet !== false ? (
+                          <div style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
                             <span>
-                              <strong>Assigned Network:</strong>{' '}
-                              <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                                {booking.assignedNetworkName}
+                              <strong>Preferred Network:</strong>{' '}
+                              <span style={{ color: 'var(--text-primary)' }}>
+                                {booking.requestedNetworkName || 'Any / Auto-Assign'}
                               </span>
                             </span>
-                          )}
-                          <span>
-                            <strong>Password Delivery:</strong>{' '}
-                            <span style={{ color: 'var(--text-primary)' }}>
-                              {booking.sendTiming === '24h' 
-                                ? '24h before meeting' 
-                                : booking.sendTiming === 'start' 
-                                  ? 'At meeting start' 
-                                  : '1h before meeting'}
+                            {booking.assignedNetworkName && (
+                              <span>
+                                <strong>Assigned Network:</strong>{' '}
+                                <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                                  {booking.assignedNetworkName}
+                                </span>
+                              </span>
+                            )}
+                            <span>
+                              <strong>Password Delivery:</strong>{' '}
+                              <span style={{ color: 'var(--text-primary)' }}>
+                                {booking.sendTiming === '24h' 
+                                  ? '24h before meeting' 
+                                  : booking.sendTiming === 'start' 
+                                    ? 'At meeting start' 
+                                    : '1h before meeting'}
+                              </span>
                             </span>
-                          </span>
-                        </div>
+                          </div>
+                        ) : (
+                          <div style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
+                            <span>
+                              <strong>Access Type:</strong>{' '}
+                              <span style={{ color: '#94a3b8' }}>Facility Visit Only (No Wi-Fi credentials requested)</span>
+                            </span>
+                          </div>
+                        )}
 
                         {/* Display custom field values submitted */}
                         {booking.customFields && Object.keys(booking.customFields).length > 0 && (
@@ -687,7 +702,7 @@ export default function EmbedManager() {
                 return (
                   <div 
                     key={field.id}
-                    className={`card builder-field-card ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                    className={`card builder-field-card ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''} ${field.condition?.fieldId ? 'has-condition' : ''}`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragOver={(e) => handleDragOver(e, index)}
@@ -695,7 +710,7 @@ export default function EmbedManager() {
                     onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                     style={{ 
                       padding: '14px 18px',
-                      borderLeft: field.locked ? '3px solid var(--primary)' : '3px solid var(--text-secondary)'
+                      borderLeft: field.condition?.fieldId ? '3px solid #38bdf8' : (field.locked ? '3px solid var(--primary)' : '3px solid var(--text-secondary)')
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -733,6 +748,22 @@ export default function EmbedManager() {
                             <Lock size={10} /> System Core
                           </span>
                         )}
+
+                        {field.condition && field.condition.fieldId && (() => {
+                          const triggerField = formConfig.fields.find(f => f.id === field.condition.fieldId);
+                          const conditionDesc = typeof field.condition.showWhen === 'boolean'
+                            ? (field.condition.showWhen ? 'Checked' : 'Unchecked')
+                            : `"${field.condition.showWhen}"`;
+                          return (
+                            <span 
+                              className="badge badge-info" 
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.25)', textTransform: 'none' }}
+                              title={`Visible only when ${triggerField?.label || field.condition.fieldId} is ${conditionDesc}`}
+                            >
+                              <Eye size={11} /> Only if "{triggerField?.label || field.condition.fieldId}" is {conditionDesc}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Right: Reorder Up/Down & Delete */}
@@ -869,6 +900,133 @@ export default function EmbedManager() {
                         </div>
                       </div>
                     )}
+
+                    {/* Checkbox Default Value Setting */}
+                    {field.type === 'checkbox' && (
+                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox"
+                          id={`def_${field.id}`}
+                          checked={field.defaultValue !== undefined ? Boolean(field.defaultValue) : false}
+                          onChange={e => handleFieldChange(index, { defaultValue: e.target.checked })}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor={`def_${field.id}`} style={{ margin: 0, fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                          Checked by default when form loads
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Conditional Visibility Rules Editor */}
+                    <div className="conditional-rule-box" style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Eye size={12} color="var(--primary)" /> Conditional Visibility Rule
+                        </span>
+                        {field.condition && field.condition.fieldId && (
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary btn-sm"
+                            style={{ height: '22px', padding: '0 8px', fontSize: '0.7rem' }}
+                            onClick={() => handleFieldChange(index, { condition: null })}
+                          >
+                            Clear Rule (Always Show)
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Show this field:</span>
+                        <select 
+                          value={field.condition?.fieldId ? 'conditional' : 'always'}
+                          onChange={(e) => {
+                            if (e.target.value === 'always') {
+                              handleFieldChange(index, { condition: null });
+                            } else {
+                              const candidate = formConfig.fields.find(f => f.id !== field.id && (f.id === 'requireInternet' || f.type === 'checkbox' || f.type === 'select')) || formConfig.fields.find(f => f.id !== field.id);
+                              if (candidate) {
+                                const defaultShowWhen = candidate.type === 'checkbox' ? true : (candidate.options?.[0] || 'true');
+                                handleFieldChange(index, { 
+                                  condition: { fieldId: candidate.id, showWhen: defaultShowWhen } 
+                                });
+                              }
+                            }
+                          }}
+                          style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
+                        >
+                          <option value="always">Always Visible</option>
+                          <option value="conditional">Only when condition is met...</option>
+                        </select>
+
+                        {field.condition?.fieldId && (
+                          <>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>When</span>
+                            <select 
+                              value={field.condition.fieldId}
+                              onChange={(e) => {
+                                const targetField = formConfig.fields.find(f => f.id === e.target.value);
+                                const defaultVal = targetField?.type === 'checkbox' ? true : (targetField?.options?.[0] || '');
+                                handleFieldChange(index, { 
+                                  condition: { fieldId: e.target.value, showWhen: defaultVal } 
+                                });
+                              }}
+                              style={{ width: 'auto', minWidth: '160px', height: '32px', fontSize: '0.8rem' }}
+                            >
+                              {formConfig.fields.filter(f => f.id !== field.id).map(f => (
+                                <option key={f.id} value={f.id}>
+                                  {f.label || f.id} ({f.type})
+                                </option>
+                              ))}
+                            </select>
+
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>is</span>
+                            {(() => {
+                              const targetField = formConfig.fields.find(f => f.id === field.condition.fieldId);
+                              if (targetField?.type === 'checkbox') {
+                                return (
+                                  <select 
+                                    value={String(field.condition.showWhen)}
+                                    onChange={(e) => handleFieldChange(index, { 
+                                      condition: { ...field.condition, showWhen: e.target.value === 'true' } 
+                                    })}
+                                    style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
+                                  >
+                                    <option value="true">Checked (Yes)</option>
+                                    <option value="false">Unchecked (No)</option>
+                                  </select>
+                                );
+                              } else if (targetField?.type === 'select' && targetField.options?.length) {
+                                return (
+                                  <select 
+                                    value={field.condition.showWhen}
+                                    onChange={(e) => handleFieldChange(index, { 
+                                      condition: { ...field.condition, showWhen: e.target.value } 
+                                    })}
+                                    style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
+                                  >
+                                    {targetField.options.map(opt => (
+                                      <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                );
+                              } else {
+                                return (
+                                  <input 
+                                    type="text" 
+                                    value={field.condition.showWhen ?? ''} 
+                                    onChange={(e) => handleFieldChange(index, { 
+                                      condition: { ...field.condition, showWhen: e.target.value } 
+                                    })}
+                                    placeholder="Value to match"
+                                    style={{ width: '130px', height: '32px', fontSize: '0.8rem' }}
+                                  />
+                                );
+                              }
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -1123,7 +1281,7 @@ export default function EmbedManager() {
           <div className="modal-content animate-in" style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
-                Approve Wi-Fi Request
+                {selectedBooking.requireInternet === false ? 'Approve Facility Visit' : 'Approve Wi-Fi Request'}
               </h3>
               <button 
                 type="button" 
@@ -1143,7 +1301,13 @@ export default function EmbedManager() {
                 )}
                 <div style={{ marginBottom: '6px' }}><strong>Organization:</strong> {selectedBooking.company || 'Not Specified'}</div>
                 <div style={{ marginBottom: '6px' }}><strong>Visit Slot:</strong> {selectedBooking.date} at {selectedBooking.time}</div>
-                <div><strong>Duration:</strong> {selectedBooking.durationHours || 1}h {selectedBooking.durationMinutes || 0}m</div>
+                <div style={{ marginBottom: '6px' }}><strong>Duration:</strong> {selectedBooking.durationHours || 1}h {selectedBooking.durationMinutes || 0}m</div>
+                <div>
+                  <strong>Wi-Fi Access:</strong>{' '}
+                  <span style={{ color: selectedBooking.requireInternet === false ? '#94a3b8' : 'var(--success)', fontWeight: 600 }}>
+                    {selectedBooking.requireInternet === false ? 'Not Requested (Facility Visit Only)' : 'Requested'}
+                  </span>
+                </div>
                 
                 {selectedBooking.customFields && Object.keys(selectedBooking.customFields).length > 0 && (
                   <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)' }}>
@@ -1157,34 +1321,60 @@ export default function EmbedManager() {
                 )}
               </div>
 
-              <div className="form-group full-width">
-                <label htmlFor="assignedNetworkSelect">Assign Wi-Fi Network</label>
-                <select 
-                  id="assignedNetworkSelect"
-                  value={assignedNetworkId} 
-                  onChange={e => setAssignedNetworkId(e.target.value)}
-                >
-                  {networks.map(n => (
-                    <option key={n.id} value={n.id}>
-                      {n.name} {n.ssidName ? `(SSID: ${n.ssidName})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  The guest requested: <strong>{selectedBooking.requestedNetworkName || 'Any / Auto-Assign'}</strong>.
-                </span>
-              </div>
+              {selectedBooking.requireInternet !== false ? (
+                <>
+                  <div className="form-group full-width">
+                    <label htmlFor="assignedNetworkSelect">Assign Wi-Fi Network</label>
+                    <select 
+                      id="assignedNetworkSelect"
+                      value={assignedNetworkId} 
+                      onChange={e => setAssignedNetworkId(e.target.value)}
+                    >
+                      {networks.map(n => (
+                        <option key={n.id} value={n.id}>
+                          {n.name} {n.ssidName ? `(SSID: ${n.ssidName})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      The guest requested: <strong>{selectedBooking.requestedNetworkName || 'Any / Auto-Assign'}</strong>.
+                    </span>
+                  </div>
 
-              <div style={{ background: 'rgba(0, 134, 214, 0.08)', border: '1px solid rgba(0, 134, 214, 0.25)', borderRadius: '8px', padding: '12px 14px', marginTop: '16px' }}>
-                <div style={{ fontSize: '0.8rem', color: '#93c5fd', lineHeight: 1.5 }}>
-                  <strong>Automated Actions on Approval:</strong>
-                  <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
-                    <li>Confirmation email dispatched to guest confirming schedule & duration.</li>
-                    <li>Calendar rotation event provisioned with automatic revocation after {selectedBooking.durationHours || 1}h {selectedBooking.durationMinutes || 0}m.</li>
-                    <li>Secure passphrase & QR code dispatched prior to visit per delivery preference.</li>
-                  </ul>
-                </div>
-              </div>
+                  <div style={{ background: 'rgba(0, 134, 214, 0.08)', border: '1px solid rgba(0, 134, 214, 0.25)', borderRadius: '8px', padding: '12px 14px', marginTop: '16px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#93c5fd', lineHeight: 1.5 }}>
+                      <strong>Automated Actions on Approval:</strong>
+                      <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
+                        <li>Confirmation email dispatched to guest confirming schedule & duration.</li>
+                        <li>Calendar rotation event provisioned with automatic revocation after {selectedBooking.durationHours || 1}h {selectedBooking.durationMinutes || 0}m.</li>
+                        <li>Secure passphrase & QR code dispatched prior to visit per delivery preference.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '14px 16px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f1f5f9', fontWeight: 600, fontSize: '0.9rem', marginBottom: '6px' }}>
+                      <Building size={16} color="var(--primary)" /> Facility Visit Only (No Wi-Fi Requested)
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                      The guest is requesting facility access only. Approving will log their visit and send an email confirmation. <strong>No Wi-Fi credentials or calendar rotation jobs will be created.</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', padding: '12px 14px', marginTop: '16px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#a7f3d0', lineHeight: 1.5 }}>
+                      <strong>Automated Actions on Approval:</strong>
+                      <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
+                        <li>Visit confirmation email dispatched to guest confirming schedule & duration.</li>
+                        <li>Booking status marked as Approved in Bastion.</li>
+                        <li>No Wi-Fi credentials generated or network access provisioned.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
@@ -1203,7 +1393,7 @@ export default function EmbedManager() {
                 disabled={actionLoading}
               >
                 {actionLoading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                <span>{actionLoading ? 'Approving...' : 'Confirm & Approve'}</span>
+                <span>{actionLoading ? 'Approving...' : (selectedBooking.requireInternet === false ? 'Confirm & Approve Visit' : 'Confirm & Approve')}</span>
               </button>
             </div>
           </div>

@@ -162,29 +162,33 @@ async function sendClientEmail(emails, network, newPassword, eventTitle) {
 }
 
 async function sendBookingReceivedCustomerEmail(booking) {
-  const subject = `Bastion: Access Request Received (${booking.company || booking.name})`;
+  const isWifi = booking.requireInternet !== false;
+  const subject = isWifi 
+    ? `Bastion: Access Request Received (${booking.company || booking.name})`
+    : `Bastion: Visit Request Received (${booking.company || booking.name})`;
   const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-        <h2 style="color: #0086d6; margin: 0; font-size: 1.4rem;">Bastion Wi-Fi Access</h2>
+        <h2 style="color: #0086d6; margin: 0; font-size: 1.4rem;">Bastion ${isWifi ? 'Wi-Fi Access' : 'Visit Booking'}</h2>
       </div>
       <p style="font-size: 1rem; color: #f3f4f6;">Hello <strong>${booking.name}</strong>,</p>
-      <p style="color: #949da8; line-height: 1.6;">Thank you for your request. Your booking is currently <strong>under administrative review</strong>. Once confirmed, your scheduled credentials will be prepared.</p>
+      <p style="color: #949da8; line-height: 1.6;">Thank you for your request. Your booking is currently <strong>under administrative review</strong>. Once confirmed, you will receive an approval notice.</p>
       
       <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 24px 0;">
         <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Event / Organization:</strong> <span style="color: #fff;">${booking.company || 'Not Specified'}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Scheduled Date:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
-        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Visit Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Wi-Fi Access:</strong> <span style="color: ${isWifi ? '#10b981' : '#94a3b8'}; font-weight: 600;">${isWifi ? 'Requested' : 'Not Requested (Visit Only)'}</span></div>
         <div><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Status:</strong> <span style="color: #f59e0b; font-weight: 600;">Pending Review</span></div>
       </div>
       
       <p style="color: #5e6774; font-size: 0.85rem; margin-top: 24px; border-top: 1px solid #222834; padding-top: 16px;">
-        You will receive a confirmation email once your access window is approved.
+        You will receive a confirmation email once your booking has been reviewed.
       </p>
     </div>
   `;
-  const text = `Hello ${booking.name},\n\nThank you for your request. Your Wi-Fi booking is currently under review.\n\nDate: ${booking.date} at ${booking.time}\nDuration: ${durationText}\nStatus: Pending Review\n\nYou will receive a confirmation email once approved.`;
+  const text = `Hello ${booking.name},\n\nThank you for your request. Your booking is currently under review.\n\nDate: ${booking.date} at ${booking.time}\nDuration: ${durationText}\nWi-Fi Access: ${isWifi ? 'Requested' : 'Not Requested'}\nStatus: Pending Review\n\nYou will receive a confirmation email once approved.`;
   return sendEmailNotification(booking.email, subject, text, html);
 }
 
@@ -193,7 +197,10 @@ async function sendBookingAdminAlertEmail(booking) {
   const adminEmail = settings.bookingAlertEmail || settings.globalAdminEmail || settings.testEmailRecipient;
   if (!adminEmail || !adminEmail.includes('@')) return false;
 
-  const subject = `[Bastion Alert] New Wi-Fi Request: ${booking.name} (${booking.company || 'Guest'})`;
+  const isWifi = booking.requireInternet !== false;
+  const subject = isWifi
+    ? `[Bastion Alert] New Wi-Fi Request: ${booking.name} (${booking.company || 'Guest'})`
+    : `[Bastion Alert] New Facility Visit (No Wi-Fi): ${booking.name} (${booking.company || 'Guest'})`;
   const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
   let customFieldsHtml = '';
   if (booking.customFields && typeof booking.customFields === 'object') {
@@ -206,18 +213,23 @@ async function sendBookingAdminAlertEmail(booking) {
 
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
-      <h2 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 1.3rem;">New Wi-Fi Access Request</h2>
-      <p style="color: #949da8;">A new guest access request has been submitted through your booking embed widget:</p>
+      <h2 style="color: ${isWifi ? '#f59e0b' : '#38bdf8'}; margin: 0 0 16px 0; font-size: 1.3rem;">
+        ${isWifi ? 'New Wi-Fi Access Request' : 'New Facility Visit Request (No Wi-Fi)'}
+      </h2>
+      <p style="color: #949da8;">A new booking request has been submitted through your widget:</p>
       
       <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 20px 0;">
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Guest Name:</strong> <span style="color: #fff;">${booking.name}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Guest Email:</strong> <span style="color: #fff;">${booking.email}</span></div>
         ${booking.phone ? `<div style="margin-bottom: 8px;"><strong style="color: #949da8;">Phone Number:</strong> <span style="color: #fff;">${booking.phone}</span></div>` : ''}
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Company / Event:</strong> <span style="color: #fff;">${booking.company || 'N/A'}</span></div>
-        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Start Time:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Scheduled Slot:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
         <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
-        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Preferred Network:</strong> <span style="color: #fff;">${booking.requestedNetworkName || 'Any / Auto-Assign'}</span></div>
-        <div style="margin-bottom: ${customFieldsHtml ? '8px' : '0'};"><strong style="color: #949da8;">Delivery Timing:</strong> <span style="color: #fff;">${booking.sendTiming || 'Standard'}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Wi-Fi Access:</strong> <span style="color: ${isWifi ? '#10b981' : '#94a3b8'}; font-weight: 600;">${isWifi ? 'Requested' : 'Not Required (Facility Visit Only)'}</span></div>
+        ${isWifi ? `
+          <div style="margin-bottom: 8px;"><strong style="color: #949da8;">Preferred Network:</strong> <span style="color: #fff;">${booking.requestedNetworkName || 'Any / Auto-Assign'}</span></div>
+          <div style="margin-bottom: ${customFieldsHtml ? '8px' : '0'};"><strong style="color: #949da8;">Delivery Timing:</strong> <span style="color: #fff;">${booking.sendTiming || 'Standard'}</span></div>
+        ` : ''}
         ${customFieldsHtml}
       </div>
       
@@ -226,7 +238,7 @@ async function sendBookingAdminAlertEmail(booking) {
       </p>
     </div>
   `;
-  const text = `New Wi-Fi Request Received:\n\nGuest: ${booking.name} (${booking.email})\nCompany: ${booking.company || 'N/A'}\nWhen: ${booking.date} at ${booking.time}\nDuration: ${durationText}\n\nReview at https://bastion.directconnect.global/bookings`;
+  const text = `New Booking Request Received:\n\nGuest: ${booking.name} (${booking.email})\nCompany: ${booking.company || 'N/A'}\nWhen: ${booking.date} at ${booking.time}\nDuration: ${durationText}\nWi-Fi: ${isWifi ? 'Requested' : 'Not Required'}\n\nReview at https://bastion.directconnect.global/bookings`;
   return sendEmailNotification(adminEmail, subject, text, html);
 }
 
@@ -255,10 +267,36 @@ async function sendBookingApprovedEmail(booking, networkName) {
   return sendEmailNotification(booking.email, subject, text, html);
 }
 
+async function sendBookingVisitApprovedEmail(booking) {
+  const subject = `Bastion: Facility Visit Confirmed for ${booking.company || booking.name}`;
+  const durationText = `${booking.durationHours || 1}h ${booking.durationMinutes || 0}m`;
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #222834; border-radius: 12px; background: #151921; color: #f3f4f6;">
+      <h2 style="color: #10b981; margin: 0 0 16px 0; font-size: 1.4rem;">Facility Visit Confirmed</h2>
+      <p style="font-size: 1rem; color: #f3f4f6;">Hello <strong>${booking.name}</strong>,</p>
+      <p style="color: #949da8; line-height: 1.6;">Your upcoming visit booking has been <strong>approved and scheduled</strong>.</p>
+      
+      <div style="background-color: #0d1117; padding: 18px; border-radius: 8px; border: 1px solid #222834; margin: 24px 0;">
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Scheduled Date:</strong> <span style="color: #fff;">${booking.date} at ${booking.time}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Visit Duration:</strong> <span style="color: #fff;">${durationText}</span></div>
+        <div style="margin-bottom: 8px;"><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Organization / Event:</strong> <span style="color: #fff;">${booking.company || 'Not Specified'}</span></div>
+        <div><strong style="color: #949da8; font-size: 0.85rem; text-transform: uppercase;">Network Access:</strong> <span style="color: #94a3b8; font-weight: 500;">Not Requested (Facility Visit Only)</span></div>
+      </div>
+      
+      <p style="color: #5e6774; font-size: 0.85rem; margin-top: 24px; border-top: 1px solid #222834; padding-top: 16px;">
+        Wi-Fi access was not requested for this visit, so no password credentials will be sent. Please check in with reception upon arrival.
+      </p>
+    </div>
+  `;
+  const text = `Hello ${booking.name},\n\nYour facility visit booking is confirmed!\n\nDate: ${booking.date} at ${booking.time}\nDuration: ${durationText}\nWi-Fi Access: Not Requested\n\nPlease check in with reception upon arrival.`;
+  return sendEmailNotification(booking.email, subject, text, html);
+}
+
 module.exports = {
   sendGlobalNotification,
   sendClientEmail,
   sendBookingReceivedCustomerEmail,
   sendBookingAdminAlertEmail,
-  sendBookingApprovedEmail
+  sendBookingApprovedEmail,
+  sendBookingVisitApprovedEmail
 };

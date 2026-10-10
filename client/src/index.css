@@ -1567,4 +1567,26 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: var(--text-secondary);
 }
 
+/* Conditional Visibility Rules in Form Builder */
+.conditional-rule-box {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+
+.conditional-rule-box:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.conditional-rule-box select,
+.conditional-rule-box input {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.builder-field-card.has-condition {
+  border-left: 3px solid #38bdf8 !important;
+}
+
 
