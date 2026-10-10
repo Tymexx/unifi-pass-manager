@@ -142,15 +142,24 @@ export default function Settings() {
         <div className="card mt-3">
           <div className="card-header flex-between mb-2">
             <h2 className="card-title">Email Notifications (SMTP)</h2>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={async () => {
-              try {
-                const res = await axios.post(API_BASE + "/api/settings/test-email", settings);
-                if (res.data.success) alert("Test email sent successfully! Check your inbox.");
-                else alert("Error: " + res.data.error);
-              } catch (err) {
-                alert("Error sending test email: " + (err.response?.data?.error || err.message));
-              }
-            }}>Test Connection</button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input 
+                type="email" 
+                placeholder="Send Test To..." 
+                value={settings.testEmailRecipient || ''} 
+                onChange={(e) => setSettings({...settings, testEmailRecipient: e.target.value})}
+                style={{ padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-btn)', border: '1px solid var(--card-border)', background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)', width: '200px' }}
+              />
+              <button type="button" className="btn btn-secondary btn-sm" onClick={async () => {
+                try {
+                  const res = await axios.post(API_BASE + "/api/settings/test-email", settings);
+                  if (res.data.success) alert("Test email sent successfully! Check your inbox.");
+                  else alert("Error: " + res.data.error);
+                } catch (err) {
+                  alert("Error sending test email: " + (err.response?.data?.error || err.message));
+                }
+              }}>Test Connection</button>
+            </div>
           </div>
           <div className="form-grid mt-2">
             <div className="form-group full-width">

@@ -41,7 +41,7 @@ app.post('/api/settings/test-email', async (req, res) => {
     const from = settings.smtpFrom || settings.smtpUser;
     await transporter.sendMail({
       from: `"Bastion Test" <${from}>`,
-      to: settings.globalAdminEmail || settings.smtpUser,
+      to: settings.testEmailRecipient || settings.globalAdminEmail || settings.smtpUser,
       subject: "Bastion: Test Email",
       text: "If you are reading this, your SMTP configuration is working perfectly!"
     });
