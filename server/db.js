@@ -49,6 +49,18 @@ const defaultData = {
     title: 'Guest Wi-Fi Booking',
     description: 'Schedule temporary, secure high-speed Wi-Fi access for your upcoming visit.',
     submitButtonText: 'Request Wi-Fi Access',
+    theme: {
+      cardBg: '#111726',
+      textColor: '#f1f5f9',
+      secondaryTextColor: '#94a3b8',
+      inputBg: '#0a0f1d',
+      inputBorder: '#222834',
+      inputTextColor: '#f1f5f9',
+      primaryColor: '#0086d6',
+      buttonTextColor: '#ffffff',
+      cardBorder: '#222834',
+      borderRadius: '16px'
+    },
     fields: [
       { id: 'name', type: 'text', label: 'Your Name', placeholder: 'e.g. Sarah Jenkins', required: true, isSystem: true, locked: true },
       { id: 'email', type: 'email', label: 'Email Address', placeholder: 'Where to send access credentials', required: true, isSystem: true, locked: true },
@@ -122,6 +134,11 @@ function readDb() {
           mutated = true;
         }
       });
+
+      if (!data.formConfig.theme) {
+        data.formConfig.theme = defaultFormConfig.theme;
+        mutated = true;
+      }
     }
 
     // Migrate per-network password policy
@@ -326,6 +343,7 @@ function saveFormConfig(config) {
     title: (config && config.title) || defaultFormConfig.title,
     description: (config && config.description !== undefined) ? config.description : defaultFormConfig.description,
     submitButtonText: (config && config.submitButtonText) || defaultFormConfig.submitButtonText,
+    theme: (config && config.theme) || defaultFormConfig.theme,
     fields: verifiedFields
   };
   

@@ -31,11 +31,113 @@ import {
   CheckSquare,
   List,
   Type,
-  FileText
+  FileText,
+  Palette,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import PublicBookingForm from './PublicBookingForm';
 
 const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3050';
+
+const THEME_PRESETS = [
+  {
+    name: 'Bastion Dark',
+    id: 'bastion_dark',
+    theme: {
+      cardBg: '#111726',
+      cardBorder: '#222834',
+      textColor: '#f1f5f9',
+      secondaryTextColor: '#94a3b8',
+      inputBg: '#0a0f1d',
+      inputBorder: '#222834',
+      inputTextColor: '#f1f5f9',
+      primaryColor: '#0086d6',
+      buttonTextColor: '#ffffff',
+      borderRadius: '16px'
+    }
+  },
+  {
+    name: 'Clean Light',
+    id: 'clean_light',
+    theme: {
+      cardBg: '#ffffff',
+      cardBorder: '#e2e8f0',
+      textColor: '#0f172a',
+      secondaryTextColor: '#64748b',
+      inputBg: '#f8fafc',
+      inputBorder: '#cbd5e1',
+      inputTextColor: '#0f172a',
+      primaryColor: '#2563eb',
+      buttonTextColor: '#ffffff',
+      borderRadius: '12px'
+    }
+  },
+  {
+    name: 'Midnight Slate',
+    id: 'midnight_slate',
+    theme: {
+      cardBg: '#0f172a',
+      cardBorder: '#334155',
+      textColor: '#f8fafc',
+      secondaryTextColor: '#94a3b8',
+      inputBg: '#1e293b',
+      inputBorder: '#334155',
+      inputTextColor: '#f8fafc',
+      primaryColor: '#38bdf8',
+      buttonTextColor: '#0f172a',
+      borderRadius: '16px'
+    }
+  },
+  {
+    name: 'Emerald Corporate',
+    id: 'emerald',
+    theme: {
+      cardBg: '#064e3b',
+      cardBorder: '#065f46',
+      textColor: '#ecfdf5',
+      secondaryTextColor: '#a7f3d0',
+      inputBg: '#022c22',
+      inputBorder: '#047857',
+      inputTextColor: '#ecfdf5',
+      primaryColor: '#10b981',
+      buttonTextColor: '#ffffff',
+      borderRadius: '12px'
+    }
+  },
+  {
+    name: 'Warm Cream',
+    id: 'warm_cream',
+    theme: {
+      cardBg: '#fefae0',
+      cardBorder: '#dda15e',
+      textColor: '#283618',
+      secondaryTextColor: '#606c38',
+      inputBg: '#ffffff',
+      inputBorder: '#dda15e',
+      inputTextColor: '#283618',
+      primaryColor: '#bc6c25',
+      buttonTextColor: '#ffffff',
+      borderRadius: '14px'
+    }
+  },
+  {
+    name: 'Pure Onyx',
+    id: 'pure_onyx',
+    theme: {
+      cardBg: '#000000',
+      cardBorder: '#27272a',
+      textColor: '#ffffff',
+      secondaryTextColor: '#a1a1aa',
+      inputBg: '#18181b',
+      inputBorder: '#3f3f46',
+      inputTextColor: '#ffffff',
+      primaryColor: '#ffffff',
+      buttonTextColor: '#000000',
+      borderRadius: '8px'
+    }
+  }
+];
 
 export default function EmbedManager() {
   const [activeTab, setActiveTab] = useState('queue'); // 'queue' | 'builder' | 'embed' | 'notifications'
@@ -45,12 +147,24 @@ export default function EmbedManager() {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   
+  // Refresh indicator & cache buster
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshedToast, setRefreshedToast] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   // Form Builder state
   const [formConfig, setFormConfig] = useState(null);
   const [savingForm, setSavingForm] = useState(false);
   const [formSaved, setFormSaved] = useState(false);
   const [showAddFieldModal, setShowAddFieldModal] = useState(false);
   const [previewTab, setPreviewTab] = useState(false); // toggle preview side-by-side or tab
+  const [expandedFieldIds, setExpandedFieldIds] = useState([]);
+
+  // Theme Customizer Modal state
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [themeSaved, setThemeSaved] = useState(false);
+  const [tempTheme, setTempTheme] = useState(null);
 
   // Drag and Drop state
   const [dragIndex, setDragIndex] = useState(null);
@@ -76,12 +190,14 @@ export default function EmbedManager() {
 
   async function fetchData() {
     try {
-      setLoading(true);
+      setRefreshing(true);
+      const cacheBust = Date.now();
       const [bookingsRes, networksRes, settingsRes, formRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/bookings`),
-        axios.get(`${API_BASE}/api/networks`),
-        axios.get(`${API_BASE}/api/settings`),
-        axios.get(`${API_BASE}/api/form-config`)
+        axios.get(`${API_BASE}/api/bookings?_t=${cacheBust}`),
+        axios.get(`${API_BASE}/api/networks?_t=${cacheBust}`),
+        axios.get(`${API_BASE}/api/settings?_t=${cacheBust}`),
+        axios.get(`${API_BASE}/api/form-config?_t=${cacheBust}`),
+        new Promise(resolve => setTimeout(resolve, 500))
       ]);
       setBookings(bookingsRes.data.bookings || []);
       setNetworks(networksRes.data || []);
@@ -91,10 +207,14 @@ export default function EmbedManager() {
       setAlertEmail(s.bookingAlertEmail || s.globalAdminEmail || s.testEmailRecipient || s.smtpUser || '');
 
       setFormConfig(formRes.data || null);
+      setRefreshKey(k => k + 1);
+      setRefreshedToast(true);
+      setTimeout(() => setRefreshedToast(false), 2200);
     } catch (err) {
       console.error('Failed to load embed manager data:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -146,6 +266,7 @@ export default function EmbedManager() {
       ...prev,
       fields: [...prev.fields, newField]
     }));
+    setExpandedFieldIds(prev => [...prev, id]);
     setShowAddFieldModal(false);
   };
 
@@ -241,6 +362,97 @@ export default function EmbedManager() {
     } finally {
       setSavingForm(false);
     }
+  };
+
+  const getFieldTypeLabel = (type) => {
+    switch (type) {
+      case 'text': return 'Text';
+      case 'email': return 'Email';
+      case 'phone': return 'Phone';
+      case 'number': return 'iOS Wheel Number';
+      case 'textarea': return 'Paragraph';
+      case 'select': return 'Dropdown';
+      case 'checkbox': return 'Checkbox';
+      case 'date': return 'Date';
+      case 'time': return 'Time';
+      case 'duration': return 'Duration';
+      case 'network_select': return 'Network Picker';
+      case 'timing_select': return 'Delivery Timing';
+      default: return type;
+    }
+  };
+
+  const toggleFieldExpand = (id) => {
+    setExpandedFieldIds(prev => 
+      prev.includes(id) ? prev.filter(fId => fId !== id) : [...prev, id]
+    );
+  };
+
+  const expandAllFields = () => {
+    if (formConfig?.fields) {
+      setExpandedFieldIds(formConfig.fields.map(f => f.id));
+    }
+  };
+
+  const collapseAllFields = () => {
+    setExpandedFieldIds([]);
+  };
+
+  // --- Theme Customizer Handlers ---
+  const handleOpenThemeModal = () => {
+    const defaultTheme = {
+      cardBg: '#111726',
+      cardBorder: '#222834',
+      textColor: '#f1f5f9',
+      secondaryTextColor: '#94a3b8',
+      inputBg: '#0a0f1d',
+      inputBorder: '#222834',
+      inputTextColor: '#f1f5f9',
+      primaryColor: '#0086d6',
+      buttonTextColor: '#ffffff',
+      borderRadius: '16px'
+    };
+    setTempTheme(formConfig?.theme ? { ...defaultTheme, ...formConfig.theme } : defaultTheme);
+    setShowThemeModal(true);
+  };
+
+  const handleApplyPreset = (presetTheme) => {
+    setTempTheme(prev => ({ ...prev, ...presetTheme }));
+  };
+
+  const handleSaveTheme = async () => {
+    try {
+      setSavingTheme(true);
+      const updatedConfig = { ...formConfig, theme: tempTheme };
+      const res = await axios.post(`${API_BASE}/api/form-config`, updatedConfig);
+      setFormConfig(res.data.formConfig);
+      setThemeSaved(true);
+      setRefreshKey(k => k + 1);
+      setTimeout(() => {
+        setThemeSaved(false);
+        setShowThemeModal(false);
+      }, 1000);
+    } catch (err) {
+      alert('Failed to save theme: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
+  const handleResetThemeDefaults = () => {
+    const defaultTheme = {
+      cardBg: '#111726',
+      cardBorder: '#222834',
+      textColor: '#f1f5f9',
+      secondaryTextColor: '#94a3b8',
+      inputBg: '#0a0f1d',
+      inputBorder: '#222834',
+      inputTextColor: '#f1f5f9',
+      primaryColor: '#0086d6',
+      buttonTextColor: '#ffffff',
+      borderRadius: '16px'
+    };
+    setTempTheme(defaultTheme);
   };
 
   // --- Queue Handlers ---
@@ -349,11 +561,21 @@ export default function EmbedManager() {
               type="button" 
               className="btn btn-secondary" 
               onClick={fetchData} 
-              disabled={loading}
-              title="Refresh data"
+              disabled={refreshing || loading}
+              title="Refresh data from server"
+              style={{ minWidth: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-              <span>Refresh</span>
+              {refreshedToast ? (
+                <>
+                  <Check size={16} color="var(--success)" />
+                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>Refreshed!</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={16} className={refreshing || loading ? 'animate-spin' : ''} />
+                  <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -618,7 +840,7 @@ export default function EmbedManager() {
             {/* Top Toolbar */}
             <div className="card" style={{ marginBottom: '20px', padding: '16px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button 
                     type="button" 
                     className="btn btn-primary btn-sm"
@@ -626,6 +848,41 @@ export default function EmbedManager() {
                   >
                     <Plus size={16} />
                     <span>Add Form Field</span>
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleOpenThemeModal}
+                    title="Customize form theme, colors, and styling"
+                  >
+                    <Palette size={15} color="var(--primary)" />
+                    <span>Customize Theme</span>
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      if (expandedFieldIds.length === (formConfig?.fields?.length || 0)) {
+                        collapseAllFields();
+                      } else {
+                        expandAllFields();
+                      }
+                    }}
+                    title={expandedFieldIds.length === (formConfig?.fields?.length || 0) ? 'Collapse all field cards' : 'Expand all field cards'}
+                  >
+                    {expandedFieldIds.length === (formConfig?.fields?.length || 0) ? (
+                      <>
+                        <ChevronUp size={15} />
+                        <span>Collapse All</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={15} />
+                        <span>Expand All</span>
+                      </>
+                    )}
                   </button>
 
                   <button 
@@ -694,88 +951,89 @@ export default function EmbedManager() {
             </div>
 
             {/* Field Cards (Drag & Drop Kanban-Style) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {formConfig.fields.map((field, index) => {
                 const isDragging = dragIndex === index;
                 const isDragOver = dragOverIndex === index;
+                const isExpanded = expandedFieldIds.includes(field.id);
+                const hasCondition = Boolean(field.condition && field.condition.fieldId);
+                const triggerField = hasCondition ? formConfig.fields.find(f => f.id === field.condition.fieldId) : null;
+                const conditionDesc = hasCondition 
+                  ? (typeof field.condition.showWhen === 'boolean' 
+                      ? (field.condition.showWhen ? 'Checked' : 'Unchecked') 
+                      : `"${field.condition.showWhen}"`)
+                  : '';
 
                 return (
                   <div 
                     key={field.id}
-                    className={`card builder-field-card ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''} ${field.condition?.fieldId ? 'has-condition' : ''}`}
+                    className={`builder-field-card ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''} ${hasCondition ? 'has-condition' : ''}`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragOver={(e) => handleDragOver(e, index)}
                     onDrop={() => handleDrop(index)}
                     onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                     style={{ 
-                      padding: '14px 18px',
-                      borderLeft: field.condition?.fieldId ? '3px solid #38bdf8' : (field.locked ? '3px solid var(--primary)' : '3px solid var(--text-secondary)')
+                      borderLeft: hasCondition ? '3px solid #38bdf8' : (field.locked ? '3px solid var(--primary)' : '3px solid rgba(255, 255, 255, 0.15)')
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      {/* Left: Drag Handle & Field Type Badge */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {/* Compact Scannable Header Row */}
+                    <div 
+                      className="builder-card-header"
+                      onClick={() => toggleFieldExpand(field.id)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                         <div 
                           className="drag-handle" 
-                          title="Click and drag to reorder field"
-                          style={{ cursor: 'grab', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                          title="Click and drag to reorder"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ cursor: 'grab', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', flexShrink: 0 }}
                         >
                           <GripVertical size={18} />
                         </div>
 
-                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {index + 1}. {field.label || 'Untitled Field'}
                         </span>
 
-                        <span className="badge" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                          {field.type === 'text' && 'Text'}
-                          {field.type === 'email' && 'Email'}
-                          {field.type === 'phone' && 'Phone'}
-                          {field.type === 'number' && 'Number (iOS Wheel)'}
-                          {field.type === 'textarea' && 'Paragraph'}
-                          {field.type === 'select' && 'Dropdown'}
-                          {field.type === 'checkbox' && 'Checkbox'}
-                          {field.type === 'date' && 'Date'}
-                          {field.type === 'time' && 'Time'}
-                          {field.type === 'duration' && 'Duration'}
-                          {field.type === 'network_select' && 'Network Picker'}
-                          {field.type === 'timing_select' && 'Delivery Timing'}
+                        <span className="badge" style={{ fontSize: '0.68rem', padding: '2px 8px', textTransform: 'none', flexShrink: 0 }}>
+                          {getFieldTypeLabel(field.type)}
                         </span>
 
-                        {field.locked && (
-                          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem' }}>
-                            <Lock size={10} /> System Core
+                        {field.required && (
+                          <span className="badge" style={{ fontSize: '0.65rem', padding: '1px 6px', background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)', flexShrink: 0 }}>
+                            Required
                           </span>
                         )}
 
-                        {field.condition && field.condition.fieldId && (() => {
-                          const triggerField = formConfig.fields.find(f => f.id === field.condition.fieldId);
-                          const conditionDesc = typeof field.condition.showWhen === 'boolean'
-                            ? (field.condition.showWhen ? 'Checked' : 'Unchecked')
-                            : `"${field.condition.showWhen}"`;
-                          return (
-                            <span 
-                              className="badge badge-info" 
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.25)', textTransform: 'none' }}
-                              title={`Visible only when ${triggerField?.label || field.condition.fieldId} is ${conditionDesc}`}
-                            >
-                              <Eye size={11} /> Only if "{triggerField?.label || field.condition.fieldId}" is {conditionDesc}
-                            </span>
-                          );
-                        })()}
+                        {field.locked && (
+                          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.65rem', padding: '1px 6px', flexShrink: 0 }}>
+                            <Lock size={10} /> Core
+                          </span>
+                        )}
+
+                        {hasCondition && (
+                          <span 
+                            className="builder-condition-badge"
+                            title={`Visible only when ${triggerField?.label || field.condition.fieldId} is ${conditionDesc}`}
+                            style={{ flexShrink: 0 }}
+                          >
+                            <Eye size={11} /> Only when "{triggerField?.label || field.condition.fieldId}" is {conditionDesc}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Right: Reorder Up/Down & Delete */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {/* Header Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                         <button 
                           type="button" 
                           className="btn btn-secondary btn-sm btn-icon"
                           onClick={() => handleMoveField(index, index - 1)}
                           disabled={index === 0}
                           title="Move up"
+                          style={{ width: '28px', height: '28px', padding: 0 }}
                         >
-                          <ArrowUp size={14} />
+                          <ArrowUp size={13} />
                         </button>
                         <button 
                           type="button" 
@@ -783,8 +1041,9 @@ export default function EmbedManager() {
                           onClick={() => handleMoveField(index, index + 1)}
                           disabled={index === formConfig.fields.length - 1}
                           title="Move down"
+                          style={{ width: '28px', height: '28px', padding: 0 }}
                         >
-                          <ArrowDown size={14} />
+                          <ArrowDown size={13} />
                         </button>
                         
                         {!field.locked ? (
@@ -793,240 +1052,253 @@ export default function EmbedManager() {
                             className="btn btn-danger btn-sm btn-icon"
                             onClick={() => handleDeleteField(index)}
                             title="Remove field"
+                            style={{ width: '28px', height: '28px', padding: 0 }}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         ) : (
-                          <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }} title="Core field cannot be deleted">
-                            <Lock size={14} />
+                          <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }} title="Core field cannot be deleted">
+                            <Lock size={13} />
+                          </div>
+                        )}
+
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => toggleFieldExpand(field.id)}
+                          style={{ height: '28px', padding: '0 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <span>{isExpanded ? 'Done' : 'Edit'}</span>
+                          {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expandable Properties Drawer */}
+                    {isExpanded && (
+                      <div className="builder-card-body animate-in">
+                        {/* Primary Label, Placeholder & Required */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr auto', gap: '12px', alignItems: 'center' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Field Label</label>
+                            <input 
+                              type="text" 
+                              value={field.label} 
+                              onChange={e => handleFieldChange(index, { label: e.target.value })}
+                              placeholder="e.g. Visitor Name"
+                            />
+                          </div>
+
+                          {field.type !== 'checkbox' && field.type !== 'date' && field.type !== 'time' && field.type !== 'duration' && field.type !== 'network_select' && field.type !== 'timing_select' ? (
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Placeholder</label>
+                              <input 
+                                type="text" 
+                                value={field.placeholder || ''} 
+                                onChange={e => handleFieldChange(index, { placeholder: e.target.value })}
+                                placeholder="Input placeholder..."
+                              />
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              {field.type === 'duration' && 'Hours & minutes selector'}
+                              {field.type === 'network_select' && 'Selects Wi-Fi network'}
+                              {field.type === 'timing_select' && 'Selects password delivery timing'}
+                              {field.type === 'date' && 'Calendar date picker'}
+                              {field.type === 'time' && 'Time slot picker'}
+                              {field.type === 'checkbox' && 'Single toggle / acceptance'}
+                            </div>
+                          )}
+
+                          {/* Required Toggle */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '16px' }}>
+                            <input 
+                              type="checkbox"
+                              id={`req_${field.id}`}
+                              checked={Boolean(field.required)}
+                              disabled={field.locked}
+                              onChange={e => handleFieldChange(index, { required: e.target.checked })}
+                              style={{ width: '16px', height: '16px', cursor: field.locked ? 'not-allowed' : 'pointer' }}
+                            />
+                            <label htmlFor={`req_${field.id}`} style={{ margin: 0, fontSize: '0.8rem', cursor: field.locked ? 'not-allowed' : 'pointer', color: field.locked ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+                              Required
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Extra options for Select */}
+                        {field.type === 'select' && (
+                          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)' }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                              Dropdown Options (comma-separated):
+                            </label>
+                            <input 
+                              type="text"
+                              value={(field.options || []).join(', ')}
+                              onChange={e => {
+                                const opts = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                handleFieldChange(index, { options: opts });
+                              }}
+                              placeholder="Option 1, Option 2, Option 3"
+                            />
+                          </div>
+                        )}
+
+                        {/* Extra options for Number (iOS Wheel) */}
+                        {field.type === 'number' && (
+                          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)', display: 'flex', gap: '16px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Minimum Value</label>
+                              <input 
+                                type="number" 
+                                value={field.min ?? 1} 
+                                onChange={e => handleFieldChange(index, { min: parseInt(e.target.value, 10) || 1 })}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Maximum Value</label>
+                              <input 
+                                type="number" 
+                                value={field.max ?? 20} 
+                                onChange={e => handleFieldChange(index, { max: parseInt(e.target.value, 10) || 20 })}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Step Increment</label>
+                              <input 
+                                type="number" 
+                                value={field.step ?? 1} 
+                                onChange={e => handleFieldChange(index, { step: parseInt(e.target.value, 10) || 1 })}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Checkbox Default Value Setting */}
+                        {field.type === 'checkbox' && (
+                          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input 
+                              type="checkbox"
+                              id={`def_${field.id}`}
+                              checked={field.defaultValue !== undefined ? Boolean(field.defaultValue) : false}
+                              onChange={e => handleFieldChange(index, { defaultValue: e.target.checked })}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                            />
+                            <label htmlFor={`def_${field.id}`} style={{ margin: 0, fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                              Checked by default when form loads
+                            </label>
+                          </div>
+                        )}
+
+                        {/* Streamlined Conditional Visibility Section */}
+                        {!hasCondition ? (
+                          <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed var(--card-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              Visibility: <strong style={{ color: 'var(--text-secondary)' }}>Always visible</strong>
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.75rem', height: '28px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                              onClick={() => {
+                                const candidate = formConfig.fields.find(f => f.id !== field.id && (f.id === 'requireInternet' || f.type === 'checkbox' || f.type === 'select')) || formConfig.fields.find(f => f.id !== field.id);
+                                if (candidate) {
+                                  const defaultShowWhen = candidate.type === 'checkbox' ? true : (candidate.options?.[0] || 'true');
+                                  handleFieldChange(index, { 
+                                    condition: { fieldId: candidate.id, showWhen: defaultShowWhen } 
+                                  });
+                                }
+                              }}
+                            >
+                              <Plus size={13} />
+                              <span>Add Visibility Condition</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed var(--card-border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <Eye size={13} /> Visibility Condition Active
+                              </span>
+                              <button 
+                                type="button" 
+                                className="btn btn-secondary btn-sm"
+                                style={{ height: '24px', padding: '0 8px', fontSize: '0.7rem' }}
+                                onClick={() => handleFieldChange(index, { condition: null })}
+                              >
+                                Remove Condition (Always Show)
+                              </button>
+                            </div>
+
+                            <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Show this field only when</span>
+                              <select 
+                                value={field.condition.fieldId}
+                                onChange={(e) => {
+                                  const targetField = formConfig.fields.find(f => f.id === e.target.value);
+                                  const defaultVal = targetField?.type === 'checkbox' ? true : (targetField?.options?.[0] || '');
+                                  handleFieldChange(index, { 
+                                    condition: { fieldId: e.target.value, showWhen: defaultVal } 
+                                  });
+                                }}
+                                style={{ width: 'auto', minWidth: '160px', height: '32px', fontSize: '0.8rem' }}
+                              >
+                                {formConfig.fields.filter(f => f.id !== field.id).map(f => (
+                                  <option key={f.id} value={f.id}>
+                                    {f.label || f.id} ({f.type})
+                                  </option>
+                                ))}
+                              </select>
+
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>is</span>
+                              {(() => {
+                                const targetField = formConfig.fields.find(f => f.id === field.condition.fieldId);
+                                if (targetField?.type === 'checkbox') {
+                                  return (
+                                    <select 
+                                      value={String(field.condition.showWhen)}
+                                      onChange={(e) => handleFieldChange(index, { 
+                                        condition: { ...field.condition, showWhen: e.target.value === 'true' } 
+                                      })}
+                                      style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
+                                    >
+                                      <option value="true">Checked (Yes)</option>
+                                      <option value="false">Unchecked (No)</option>
+                                    </select>
+                                  );
+                                } else if (targetField?.type === 'select' && targetField.options?.length) {
+                                  return (
+                                    <select 
+                                      value={field.condition.showWhen}
+                                      onChange={(e) => handleFieldChange(index, { 
+                                        condition: { ...field.condition, showWhen: e.target.value } 
+                                      })}
+                                      style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
+                                    >
+                                      {targetField.options.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                      ))}
+                                    </select>
+                                  );
+                                } else {
+                                  return (
+                                    <input 
+                                      type="text" 
+                                      value={field.condition.showWhen ?? ''} 
+                                      onChange={(e) => handleFieldChange(index, { 
+                                        condition: { ...field.condition, showWhen: e.target.value } 
+                                      })}
+                                      placeholder="Value to match"
+                                      style={{ width: '130px', height: '32px', fontSize: '0.8rem' }}
+                                    />
+                                  );
+                                }
+                              })()}
+                            </div>
                           </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* Field Properties Inputs */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr auto', gap: '12px', alignItems: 'center' }}>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Field Label</label>
-                        <input 
-                          type="text" 
-                          value={field.label} 
-                          onChange={e => handleFieldChange(index, { label: e.target.value })}
-                          placeholder="e.g. Visitor Name"
-                        />
-                      </div>
-
-                      {field.type !== 'checkbox' && field.type !== 'date' && field.type !== 'time' && field.type !== 'duration' && field.type !== 'network_select' && field.type !== 'timing_select' ? (
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Placeholder</label>
-                          <input 
-                            type="text" 
-                            value={field.placeholder || ''} 
-                            onChange={e => handleFieldChange(index, { placeholder: e.target.value })}
-                            placeholder="Input placeholder..."
-                          />
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {field.type === 'duration' && 'Hours & minutes selector'}
-                          {field.type === 'network_select' && 'Selects Wi-Fi network'}
-                          {field.type === 'timing_select' && 'Selects password delivery timing'}
-                          {field.type === 'date' && 'Calendar date picker'}
-                          {field.type === 'time' && 'Time slot picker'}
-                          {field.type === 'checkbox' && 'Single toggle / acceptance'}
-                        </div>
-                      )}
-
-                      {/* Required Toggle */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '16px' }}>
-                        <input 
-                          type="checkbox"
-                          id={`req_${field.id}`}
-                          checked={Boolean(field.required)}
-                          disabled={field.locked}
-                          onChange={e => handleFieldChange(index, { required: e.target.checked })}
-                          style={{ width: '16px', height: '16px', cursor: field.locked ? 'not-allowed' : 'pointer' }}
-                        />
-                        <label htmlFor={`req_${field.id}`} style={{ margin: 0, fontSize: '0.8rem', cursor: field.locked ? 'not-allowed' : 'pointer', color: field.locked ? 'var(--text-muted)' : 'var(--text-primary)' }}>
-                          Required
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Extra options for Select */}
-                    {field.type === 'select' && (
-                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                          Dropdown Options (comma-separated):
-                        </label>
-                        <input 
-                          type="text"
-                          value={(field.options || []).join(', ')}
-                          onChange={e => {
-                            const opts = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                            handleFieldChange(index, { options: opts });
-                          }}
-                          placeholder="Option 1, Option 2, Option 3"
-                        />
-                      </div>
                     )}
-
-                    {/* Extra options for Number (iOS Wheel) */}
-                    {field.type === 'number' && (
-                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)', display: 'flex', gap: '16px' }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Minimum Value</label>
-                          <input 
-                            type="number" 
-                            value={field.min ?? 1} 
-                            onChange={e => handleFieldChange(index, { min: parseInt(e.target.value, 10) || 1 })}
-                          />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Maximum Value</label>
-                          <input 
-                            type="number" 
-                            value={field.max ?? 20} 
-                            onChange={e => handleFieldChange(index, { max: parseInt(e.target.value, 10) || 20 })}
-                          />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Step Increment</label>
-                          <input 
-                            type="number" 
-                            value={field.step ?? 1} 
-                            onChange={e => handleFieldChange(index, { step: parseInt(e.target.value, 10) || 1 })}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Checkbox Default Value Setting */}
-                    {field.type === 'checkbox' && (
-                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input 
-                          type="checkbox"
-                          id={`def_${field.id}`}
-                          checked={field.defaultValue !== undefined ? Boolean(field.defaultValue) : false}
-                          onChange={e => handleFieldChange(index, { defaultValue: e.target.checked })}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor={`def_${field.id}`} style={{ margin: 0, fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                          Checked by default when form loads
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Conditional Visibility Rules Editor */}
-                    <div className="conditional-rule-box" style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--card-border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Eye size={12} color="var(--primary)" /> Conditional Visibility Rule
-                        </span>
-                        {field.condition && field.condition.fieldId && (
-                          <button 
-                            type="button" 
-                            className="btn btn-secondary btn-sm"
-                            style={{ height: '22px', padding: '0 8px', fontSize: '0.7rem' }}
-                            onClick={() => handleFieldChange(index, { condition: null })}
-                          >
-                            Clear Rule (Always Show)
-                          </button>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Show this field:</span>
-                        <select 
-                          value={field.condition?.fieldId ? 'conditional' : 'always'}
-                          onChange={(e) => {
-                            if (e.target.value === 'always') {
-                              handleFieldChange(index, { condition: null });
-                            } else {
-                              const candidate = formConfig.fields.find(f => f.id !== field.id && (f.id === 'requireInternet' || f.type === 'checkbox' || f.type === 'select')) || formConfig.fields.find(f => f.id !== field.id);
-                              if (candidate) {
-                                const defaultShowWhen = candidate.type === 'checkbox' ? true : (candidate.options?.[0] || 'true');
-                                handleFieldChange(index, { 
-                                  condition: { fieldId: candidate.id, showWhen: defaultShowWhen } 
-                                });
-                              }
-                            }
-                          }}
-                          style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
-                        >
-                          <option value="always">Always Visible</option>
-                          <option value="conditional">Only when condition is met...</option>
-                        </select>
-
-                        {field.condition?.fieldId && (
-                          <>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>When</span>
-                            <select 
-                              value={field.condition.fieldId}
-                              onChange={(e) => {
-                                const targetField = formConfig.fields.find(f => f.id === e.target.value);
-                                const defaultVal = targetField?.type === 'checkbox' ? true : (targetField?.options?.[0] || '');
-                                handleFieldChange(index, { 
-                                  condition: { fieldId: e.target.value, showWhen: defaultVal } 
-                                });
-                              }}
-                              style={{ width: 'auto', minWidth: '160px', height: '32px', fontSize: '0.8rem' }}
-                            >
-                              {formConfig.fields.filter(f => f.id !== field.id).map(f => (
-                                <option key={f.id} value={f.id}>
-                                  {f.label || f.id} ({f.type})
-                                </option>
-                              ))}
-                            </select>
-
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>is</span>
-                            {(() => {
-                              const targetField = formConfig.fields.find(f => f.id === field.condition.fieldId);
-                              if (targetField?.type === 'checkbox') {
-                                return (
-                                  <select 
-                                    value={String(field.condition.showWhen)}
-                                    onChange={(e) => handleFieldChange(index, { 
-                                      condition: { ...field.condition, showWhen: e.target.value === 'true' } 
-                                    })}
-                                    style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
-                                  >
-                                    <option value="true">Checked (Yes)</option>
-                                    <option value="false">Unchecked (No)</option>
-                                  </select>
-                                );
-                              } else if (targetField?.type === 'select' && targetField.options?.length) {
-                                return (
-                                  <select 
-                                    value={field.condition.showWhen}
-                                    onChange={(e) => handleFieldChange(index, { 
-                                      condition: { ...field.condition, showWhen: e.target.value } 
-                                    })}
-                                    style={{ width: 'auto', minWidth: '130px', height: '32px', fontSize: '0.8rem' }}
-                                  >
-                                    {targetField.options.map(opt => (
-                                      <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                  </select>
-                                );
-                              } else {
-                                return (
-                                  <input 
-                                    type="text" 
-                                    value={field.condition.showWhen ?? ''} 
-                                    onChange={(e) => handleFieldChange(index, { 
-                                      condition: { ...field.condition, showWhen: e.target.value } 
-                                    })}
-                                    placeholder="Value to match"
-                                    style={{ width: '130px', height: '32px', fontSize: '0.8rem' }}
-                                  />
-                                );
-                              }
-                            })()}
-                          </>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 );
               })}
@@ -1105,7 +1377,8 @@ export default function EmbedManager() {
               justifyContent: 'center'
             }}>
               <iframe 
-                src={embedUrl} 
+                key={refreshKey}
+                src={`${embedUrl}?_rk=${refreshKey}`} 
                 title="Public Booking Form Preview"
                 width="100%" 
                 height="680" 
@@ -1395,6 +1668,292 @@ export default function EmbedManager() {
                 {actionLoading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 <span>{actionLoading ? 'Approving...' : (selectedBooking.requireInternet === false ? 'Confirm & Approve Visit' : 'Confirm & Approve')}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: THEME CUSTOMIZER */}
+      {showThemeModal && tempTheme && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content animate-in" style={{ maxWidth: '920px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Palette size={20} color="var(--primary)" />
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
+                  Embed Theme & Color Customizer
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                className="btn-icon btn-sm" 
+                onClick={() => setShowThemeModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ overflowY: 'auto', padding: '16px 4px' }}>
+              <div className="theme-modal-layout">
+                {/* Left Column: Preset Selector and Color Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Presets */}
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+                      Preset Themes
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                      {THEME_PRESETS.map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className="theme-palette-btn"
+                          onClick={() => handleApplyPreset(preset.theme)}
+                        >
+                          <span style={{ 
+                            width: '14px', 
+                            height: '14px', 
+                            borderRadius: '50%', 
+                            background: preset.theme.primaryColor,
+                            border: `2px solid ${preset.theme.cardBg}`,
+                            display: 'inline-block',
+                            flexShrink: 0
+                          }} />
+                          <span style={{ fontSize: '0.78rem' }}>{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Color Tokens List */}
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+                      Color Scheme & Tokens
+                    </label>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {[
+                        { key: 'cardBg', label: 'Card Background' },
+                        { key: 'cardBorder', label: 'Card Border' },
+                        { key: 'textColor', label: 'Primary Heading & Text' },
+                        { key: 'secondaryTextColor', label: 'Subtitle & Helper Text' },
+                        { key: 'inputBg', label: 'Input Field Background' },
+                        { key: 'inputBorder', label: 'Input Field Border' },
+                        { key: 'inputTextColor', label: 'Input Text Color' },
+                        { key: 'primaryColor', label: 'Button & Accent Color' },
+                        { key: 'buttonTextColor', label: 'Button Text Color' }
+                      ].map(token => {
+                        const val = tempTheme[token.key] || '#ffffff';
+                        return (
+                          <div key={token.key} className="theme-color-row">
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                              {token.label}
+                            </span>
+                            <div className="theme-color-input-wrapper">
+                              <input 
+                                type="color" 
+                                className="theme-native-color"
+                                value={val.startsWith('#') && val.length === 7 ? val : '#000000'}
+                                onChange={e => setTempTheme(prev => ({ ...prev, [token.key]: e.target.value }))}
+                                title={`Pick color for ${token.label}`}
+                              />
+                              <input 
+                                type="text"
+                                className="theme-hex-code-input"
+                                value={val}
+                                onChange={e => setTempTheme(prev => ({ ...prev, [token.key]: e.target.value }))}
+                                placeholder="#000000"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Corner Radius */}
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+                      Card Corner Radius
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {['4px', '8px', '12px', '16px', '24px'].map(r => (
+                        <button
+                          key={r}
+                          type="button"
+                          className={`btn btn-sm ${tempTheme.borderRadius === r ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setTempTheme(prev => ({ ...prev, borderRadius: r }))}
+                          style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Real-Time Live Preview */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', margin: 0 }}>
+                      Live Appearance Preview
+                    </label>
+                    <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>Matches External Site</span>
+                  </div>
+
+                  <div style={{
+                    backgroundColor: tempTheme.cardBg || '#111726',
+                    borderColor: tempTheme.cardBorder || '#222834',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderRadius: tempTheme.borderRadius || '16px',
+                    padding: '24px',
+                    color: tempTheme.textColor || '#f1f5f9',
+                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.45)',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.05)', padding: '5px 12px', borderRadius: '999px', marginBottom: '12px', border: `1px solid ${tempTheme.cardBorder || 'rgba(255, 255, 255, 0.1)'}` }}>
+                      <img src="/bastion-logo-v2.svg" alt="Bastion" width={20} height={20} />
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: tempTheme.textColor || '#f1f5f9' }}>Bastion Access</span>
+                    </div>
+
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.2rem', fontWeight: 700, color: tempTheme.textColor || '#f1f5f9' }}>
+                      {formConfig?.title || 'Guest Wi-Fi Booking'}
+                    </h3>
+                    <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: tempTheme.secondaryTextColor || '#94a3b8' }}>
+                      {formConfig?.description || 'Schedule temporary, secure high-speed Wi-Fi access.'}
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 500, color: tempTheme.textColor || '#f1f5f9', display: 'block', marginBottom: '4px' }}>
+                          Your Name *
+                        </label>
+                        <input 
+                          type="text" 
+                          readOnly 
+                          value="Sarah Jenkins"
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            backgroundColor: tempTheme.inputBg || '#0a0f1d',
+                            borderColor: tempTheme.inputBorder || '#222834',
+                            borderWidth: '1px',
+                            borderStyle: 'solid',
+                            color: tempTheme.inputTextColor || '#f1f5f9',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            fontSize: '0.85rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 500, color: tempTheme.textColor || '#f1f5f9', display: 'block', marginBottom: '4px' }}>
+                          Email Address *
+                        </label>
+                        <input 
+                          type="text" 
+                          readOnly 
+                          value="sarah.jenkins@company.com"
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            backgroundColor: tempTheme.inputBg || '#0a0f1d',
+                            borderColor: tempTheme.inputBorder || '#222834',
+                            borderWidth: '1px',
+                            borderStyle: 'solid',
+                            color: tempTheme.inputTextColor || '#f1f5f9',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            fontSize: '0.85rem'
+                          }}
+                        />
+                      </div>
+
+                      {/* Checkbox with label left, box on far right */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        backgroundColor: tempTheme.inputBg || '#0a0f1d',
+                        border: `1px solid ${tempTheme.inputBorder || '#222834'}`,
+                        borderRadius: '8px',
+                        boxSizing: 'border-box'
+                      }}>
+                        <span style={{ fontSize: '0.85rem', color: tempTheme.textColor || '#f1f5f9', fontWeight: 500 }}>
+                          Do you require internet access?
+                        </span>
+                        <input 
+                          type="checkbox" 
+                          readOnly 
+                          checked={true}
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            accentColor: tempTheme.primaryColor || '#0086d6',
+                            margin: 0,
+                            cursor: 'default',
+                            flexShrink: 0
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        style={{
+                          backgroundColor: tempTheme.primaryColor || '#0086d6',
+                          color: tempTheme.buttonTextColor || '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '10px 16px',
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          marginTop: '4px',
+                          cursor: 'default',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                        }}
+                      >
+                        {formConfig?.submitButtonText || 'Request Wi-Fi Access'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-sm"
+                onClick={handleResetThemeDefaults}
+              >
+                <RotateCcw size={14} />
+                <span>Reset to Bastion Default</span>
+              </button>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowThemeModal(false)}
+                  disabled={savingTheme}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleSaveTheme}
+                  disabled={savingTheme}
+                >
+                  {savingTheme ? <RefreshCw size={16} className="animate-spin" /> : (themeSaved ? <CheckCircle2 size={16} /> : <Save size={16} />)}
+                  <span>{savingTheme ? 'Saving Theme...' : (themeSaved ? 'Saved!' : 'Apply & Save Theme')}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

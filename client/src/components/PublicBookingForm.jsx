@@ -351,20 +351,46 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
   }
 
   const fields = formConfig?.fields || [];
+  const theme = formConfig?.theme || {
+    cardBg: '#111726',
+    textColor: '#f1f5f9',
+    secondaryTextColor: '#94a3b8',
+    inputBg: '#0a0f1d',
+    inputBorder: '#222834',
+    inputTextColor: '#f1f5f9',
+    primaryColor: '#0086d6',
+    buttonTextColor: '#ffffff',
+    cardBorder: '#222834',
+    borderRadius: '16px'
+  };
+
+  const cardStyle = {
+    backgroundColor: theme.cardBg || '#111726',
+    borderColor: theme.cardBorder || '#222834',
+    borderRadius: theme.borderRadius || '16px',
+    color: theme.textColor || '#f1f5f9',
+    '--theme-primary': theme.primaryColor || '#0086d6',
+    '--theme-text': theme.textColor || '#f1f5f9',
+    '--theme-subtext': theme.secondaryTextColor || '#94a3b8',
+    '--theme-input-bg': theme.inputBg || '#0a0f1d',
+    '--theme-input-border': theme.inputBorder || '#222834',
+    '--theme-input-text': theme.inputTextColor || '#f1f5f9',
+    '--theme-btn-text': theme.buttonTextColor || '#ffffff'
+  };
 
   return (
     <div className="public-booking-container">
-      <div className="public-booking-card animate-in">
+      <div className="public-booking-card animate-in" style={cardStyle}>
         <div className="public-booking-header">
           <div className="public-booking-brand">
             <img src="/bastion-logo-v2.svg" alt="Bastion" width={28} height={28} />
-            <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.02em', color: '#f1f5f9' }}>Bastion Access</span>
+            <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.02em', color: theme.textColor || '#f1f5f9' }}>Bastion Access</span>
           </div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '8px 0 4px 0', color: '#f1f5f9' }}>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '8px 0 4px 0', color: theme.textColor || '#f1f5f9' }}>
             {formConfig?.title || 'Guest Wi-Fi Booking'}
           </h1>
           {formConfig?.description && (
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '0.85rem', color: theme.secondaryTextColor || '#64748b', margin: 0 }}>
               {formConfig.description}
             </p>
           )}
@@ -490,18 +516,46 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
 
             if (type === 'checkbox') {
               return (
-                <div key={id} className="form-group full-width" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div 
+                  key={id} 
+                  className="form-group full-width booking-checkbox-card" 
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    gap: '16px',
+                    padding: '12px 16px',
+                    background: 'var(--theme-input-bg, rgba(255, 255, 255, 0.03))',
+                    border: '1px solid var(--theme-input-border, var(--card-border))',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    boxSizing: 'border-box'
+                  }}
+                  onClick={(e) => {
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                      handleInputChange(id, !Boolean(value));
+                    }
+                  }}
+                >
+                  <label htmlFor={id} style={{ margin: 0, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500, color: 'var(--theme-text, var(--text-primary))', flex: 1, userSelect: 'none' }}>
+                    {label}{required ? ' *' : ''}
+                  </label>
                   <input 
                     id={id}
                     type="checkbox" 
                     checked={Boolean(value)} 
                     onChange={e => handleInputChange(id, e.target.checked)}
                     required={required}
-                    style={{ width: '18px', height: '18px', cursor: 'pointer', margin: 0 }}
+                    style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      accentColor: 'var(--theme-primary, #0086d6)', 
+                      cursor: 'pointer', 
+                      margin: 0, 
+                      flexShrink: 0 
+                    }}
                   />
-                  <label htmlFor={id} style={{ margin: 0, cursor: 'pointer', fontSize: '0.875rem' }}>
-                    {label}{required ? ' *' : ''}
-                  </label>
                 </div>
               );
             }
