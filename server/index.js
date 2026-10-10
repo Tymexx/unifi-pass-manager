@@ -26,8 +26,21 @@ app.use(express.json());
 
 // API: Version & Health
 app.get('/api/version', (req, res) => {
+  let version = require('./package.json').version || '1.0.2';
+  let buildHash = 'latest';
+  try {
+    const fs = require('fs');
+    const vPath = path.join(__dirname, '../version.json');
+    if (fs.existsSync(vPath)) {
+      const vData = JSON.parse(fs.readFileSync(vPath, 'utf8'));
+      if (vData.version) version = vData.version;
+      if (vData.buildHash) buildHash = vData.buildHash;
+    }
+  } catch {}
+
   res.json({
-    version: require('./package.json').version || '1.0.0',
+    version,
+    build: buildHash,
     status: 'online'
   });
 });

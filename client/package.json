@@ -1,11 +1,11 @@
 {
   "name": "client",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "node ../scripts/sync-version.js && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
