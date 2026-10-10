@@ -1766,4 +1766,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-transform: uppercase !important;
 }
 
+@media (max-width: 1080px) {
+  .builder-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
 

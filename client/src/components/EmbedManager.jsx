@@ -34,7 +34,9 @@ import {
   FileText,
   Palette,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  GitBranch,
+  Asterisk
 } from 'lucide-react';
 import PublicBookingForm from './PublicBookingForm';
 
@@ -157,7 +159,7 @@ export default function EmbedManager() {
   const [savingForm, setSavingForm] = useState(false);
   const [formSaved, setFormSaved] = useState(false);
   const [showAddFieldModal, setShowAddFieldModal] = useState(false);
-  const [previewTab, setPreviewTab] = useState(false); // toggle preview side-by-side or tab
+  const [previewTab, setPreviewTab] = useState(true); // toggle preview side-by-side or tab
   const [expandedFieldIds, setExpandedFieldIds] = useState([]);
 
   // Theme Customizer Modal state
@@ -369,15 +371,15 @@ export default function EmbedManager() {
       case 'text': return 'Text';
       case 'email': return 'Email';
       case 'phone': return 'Phone';
-      case 'number': return 'iOS Wheel Number';
+      case 'number': return 'Number';
       case 'textarea': return 'Paragraph';
       case 'select': return 'Dropdown';
       case 'checkbox': return 'Checkbox';
       case 'date': return 'Date';
       case 'time': return 'Time';
       case 'duration': return 'Duration';
-      case 'network_select': return 'Network Picker';
-      case 'timing_select': return 'Delivery Timing';
+      case 'network_select': return 'Network';
+      case 'timing_select': return 'Timing';
       default: return type;
     }
   };
@@ -835,7 +837,7 @@ export default function EmbedManager() {
 
       {/* TAB 2: FORM BUILDER */}
       {activeTab === 'builder' && formConfig && (
-        <div style={{ display: 'grid', gridTemplateColumns: previewTab ? '1fr 1fr' : '1fr', gap: '24px' }}>
+        <div className="builder-split-grid" style={{ display: 'grid', gridTemplateColumns: previewTab ? 'minmax(0, 1fr) minmax(340px, 420px)' : '1fr', gap: '20px' }}>
           <div>
             {/* Top Toolbar */}
             <div className="card" style={{ marginBottom: '20px', padding: '16px 20px' }}>
@@ -992,33 +994,78 @@ export default function EmbedManager() {
                           <GripVertical size={18} />
                         </div>
 
-                        <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>
                           {index + 1}. {field.label || 'Untitled Field'}
                         </span>
 
-                        <span className="badge" style={{ fontSize: '0.68rem', padding: '2px 8px', textTransform: 'none', flexShrink: 0 }}>
+                        <span 
+                          className="badge" 
+                          title={`Field Type: ${field.type}`}
+                          style={{ fontSize: '0.68rem', padding: '2px 7px', textTransform: 'none', flexShrink: 0, background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}
+                        >
                           {getFieldTypeLabel(field.type)}
                         </span>
 
                         {field.required && (
-                          <span className="badge" style={{ fontSize: '0.65rem', padding: '1px 6px', background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)', flexShrink: 0 }}>
-                            Required
+                          <span 
+                            title="Required Field (Visitor must fill this out to submit the form)"
+                            style={{ 
+                              width: '20px', 
+                              height: '20px', 
+                              borderRadius: '50%', 
+                              background: 'rgba(239, 68, 68, 0.15)', 
+                              color: '#f87171', 
+                              border: '1px solid rgba(239, 68, 68, 0.35)', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              flexShrink: 0,
+                              cursor: 'help'
+                            }}
+                          >
+                            <Asterisk size={13} strokeWidth={2.5} />
                           </span>
                         )}
 
                         {field.locked && (
-                          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.65rem', padding: '1px 6px', flexShrink: 0 }}>
-                            <Lock size={10} /> Core
+                          <span 
+                            title="Core System Field (Protected: required for booking workflow and cannot be removed)"
+                            style={{ 
+                              width: '20px', 
+                              height: '20px', 
+                              borderRadius: '50%', 
+                              background: 'rgba(0, 134, 214, 0.15)', 
+                              color: '#38bdf8', 
+                              border: '1px solid rgba(0, 134, 214, 0.3)', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              flexShrink: 0,
+                              cursor: 'help'
+                            }}
+                          >
+                            <Lock size={11} />
                           </span>
                         )}
 
                         {hasCondition && (
                           <span 
-                            className="builder-condition-badge"
-                            title={`Visible only when ${triggerField?.label || field.condition.fieldId} is ${conditionDesc}`}
-                            style={{ flexShrink: 0 }}
+                            title={`Conditional Logic: Shown only when "${triggerField?.label || field.condition.fieldId}" is ${conditionDesc}`}
+                            style={{ 
+                              width: '20px', 
+                              height: '20px', 
+                              borderRadius: '50%', 
+                              background: 'rgba(56, 189, 248, 0.15)', 
+                              color: '#38bdf8', 
+                              border: '1px solid rgba(56, 189, 248, 0.35)', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              flexShrink: 0,
+                              cursor: 'help'
+                            }}
                           >
-                            <Eye size={11} /> Only when "{triggerField?.label || field.condition.fieldId}" is {conditionDesc}
+                            <GitBranch size={11} />
                           </span>
                         )}
                       </div>
