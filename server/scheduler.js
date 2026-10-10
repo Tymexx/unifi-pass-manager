@@ -183,6 +183,10 @@ function startScheduler() {
              rule = dateObj;
            } else {
              console.log(`Skipping one-off event ${id}, date is in the past.`);
+             // Auto-clean up stuck past events on boot
+             const updatedEvents = getEvents().filter(e => e.id !== id);
+             saveEvents(updatedEvents);
+             console.log(`Automatically cleaned up expired one-off event ${id}`);
            }
          }
       }
