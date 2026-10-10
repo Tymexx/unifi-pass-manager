@@ -140,8 +140,17 @@ export default function Settings() {
         </div>
 
         <div className="card mt-3">
-          <div className="card-header">
+          <div className="card-header flex-between mb-2">
             <h2 className="card-title">Email Notifications (SMTP)</h2>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={async () => {
+              try {
+                const res = await axios.post(API_BASE + "/api/settings/test-email", settings);
+                if (res.data.success) alert("Test email sent successfully! Check your inbox.");
+                else alert("Error: " + res.data.error);
+              } catch (err) {
+                alert("Error sending test email: " + (err.response?.data?.error || err.message));
+              }
+            }}>Test Connection</button>
           </div>
           <div className="form-grid mt-2">
             <div className="form-group full-width">
