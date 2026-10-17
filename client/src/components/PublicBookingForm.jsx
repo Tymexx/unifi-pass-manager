@@ -13,6 +13,10 @@ import {
   Phone,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  Check,
   Hash
 } from 'lucide-react';
 
@@ -73,6 +77,264 @@ function IosNumberWheel({ value, onChange, min = 1, max = 50, step = 1, label })
   );
 }
 
+// Interactive Theme-Aware Calendar Date Picker
+function CalendarDatePicker({ value, onChange, label, required }) {
+  const [showCalendar, setShowCalendar] = useState(false);
+  const selectedDate = value ? new Date(value + 'T00:00:00') : new Date();
+  const [viewYear, setViewYear] = useState(selectedDate.getFullYear() || new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(selectedDate.getMonth() || new Date().getMonth());
+
+  const formatDisplay = (dStr) => {
+    if (!dStr) return 'Select visit date...';
+    try {
+      const d = new Date(dStr + 'T00:00:00');
+      return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    } catch {
+      return dStr;
+    }
+  };
+
+  const handlePrevMonth = (e) => {
+    e.stopPropagation();
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(y => y - 1);
+    } else {
+      setViewMonth(m => m - 1);
+    }
+  };
+
+  const handleNextMonth = (e) => {
+    e.stopPropagation();
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(y => y + 1);
+    } else {
+      setViewMonth(m => m + 1);
+    }
+  };
+
+  const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
+  const startOffset = (firstDayOfMonth + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return (
+    <div className="calendar-date-picker-wrapper form-group full-width" style={{ marginBottom: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+        <label style={{ margin: 0 }}>{label}{required ? ' *' : ''}</label>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            type="button"
+            className="calendar-quick-chip"
+            style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              background: value === todayStr ? 'var(--theme-primary, #0086d6)' : 'rgba(255, 255, 255, 0.05)',
+              color: value === todayStr ? '#fff' : 'var(--theme-subtext, #94a3b8)',
+              border: '1px solid var(--theme-input-border, rgba(255,255,255,0.1))',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              onChange(todayStr);
+              const d = new Date();
+              setViewYear(d.getFullYear());
+              setViewMonth(d.getMonth());
+            }}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            className="calendar-quick-chip"
+            style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              background: value === tomorrowStr ? 'var(--theme-primary, #0086d6)' : 'rgba(255, 255, 255, 0.05)',
+              color: value === tomorrowStr ? '#fff' : 'var(--theme-subtext, #94a3b8)',
+              border: '1px solid var(--theme-input-border, rgba(255,255,255,0.1))',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              onChange(tomorrowStr);
+              const d = new Date(tomorrowStr + 'T00:00:00');
+              setViewYear(d.getFullYear());
+              setViewMonth(d.getMonth());
+            }}
+          >
+            Tomorrow
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="calendar-date-display-trigger"
+        onClick={() => setShowCalendar(!showCalendar)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px',
+          background: 'var(--theme-input-bg, #0a0f1d)',
+          border: '1px solid var(--theme-input-border, #222834)',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          color: 'var(--theme-input-text, #f1f5f9)',
+          fontSize: '0.9rem'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Calendar size={16} color="var(--theme-primary, #0086d6)" />
+          <span style={{ fontWeight: 500 }}>{formatDisplay(value)}</span>
+        </div>
+        <span style={{ fontSize: '0.75rem', color: 'var(--theme-subtext, #64748b)' }}>
+          {showCalendar ? 'Close ▲' : 'Open Calendar ▼'}
+        </span>
+      </div>
+
+      {showCalendar && (
+        <div 
+          className="calendar-popdown-grid animate-in"
+          style={{
+            marginTop: '8px',
+            padding: '14px',
+            background: 'var(--theme-card-bg, #111726)',
+            border: '1px solid var(--theme-input-border, #222834)',
+            borderRadius: '10px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
+            userSelect: 'none'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              style={{ background: 'transparent', border: 'none', color: 'var(--theme-text, #f1f5f9)', cursor: 'pointer', padding: '4px' }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--theme-text, #f1f5f9)' }}>
+              {monthNames[viewMonth]} {viewYear}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              style={{ background: 'transparent', border: 'none', color: 'var(--theme-text, #f1f5f9)', cursor: 'pointer', padding: '4px' }}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', marginBottom: '6px' }}>
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(day => (
+              <span key={day} style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--theme-subtext, #64748b)' }}>
+                {day}
+              </span>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+            {Array.from({ length: startOffset }).map((_, i) => (
+              <div key={`empty-${i}`} />
+            ))}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const dayNum = i + 1;
+              const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+              const isSelected = value === dateStr;
+              const isToday = dateStr === todayStr;
+              const isPast = dateStr < todayStr;
+
+              return (
+                <button
+                  key={dayNum}
+                  type="button"
+                  disabled={isPast}
+                  onClick={() => {
+                    onChange(dateStr);
+                    setShowCalendar(false);
+                  }}
+                  style={{
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: isToday && !isSelected ? '1px solid var(--theme-primary, #0086d6)' : 'none',
+                    background: isSelected 
+                      ? 'var(--theme-primary, #0086d6)' 
+                      : (isPast ? 'transparent' : 'rgba(255,255,255,0.03)'),
+                    color: isSelected 
+                      ? '#ffffff' 
+                      : (isPast ? 'rgba(255,255,255,0.2)' : 'var(--theme-text, #f1f5f9)'),
+                    fontSize: '0.8rem',
+                    fontWeight: isSelected || isToday ? 600 : 400,
+                    cursor: isPast ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {dayNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Interactive Time Slot Picker with Quick Chips
+function TimeSlotPicker({ value, onChange, label, required }) {
+  const quickTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '17:00'];
+  return (
+    <div className="time-picker-wrapper form-group full-width" style={{ marginBottom: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+        <label htmlFor="time" style={{ margin: 0 }}>{label}{required ? ' *' : ''}</label>
+        <span style={{ fontSize: '0.72rem', color: 'var(--theme-subtext, #94a3b8)' }}>24-hour format</span>
+      </div>
+      <div style={{ position: 'relative', marginBottom: '8px' }}>
+        <input 
+          id="time"
+          type="time"
+          value={value || '09:00'}
+          onChange={e => onChange(e.target.value)}
+          required={required}
+          style={{ width: '100%', paddingLeft: '38px' }}
+        />
+        <Clock size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px', top: '12px', pointerEvents: 'none' }} />
+      </div>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {quickTimes.map(t => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange(t)}
+            style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              background: value === t ? 'var(--theme-primary, #0086d6)' : 'rgba(255, 255, 255, 0.05)',
+              color: value === t ? '#fff' : 'var(--theme-subtext, #94a3b8)',
+              border: '1px solid var(--theme-input-border, rgba(255,255,255,0.1))',
+              cursor: 'pointer'
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Helper: Determine whether a field is visible based on conditional logic
 function isFieldVisible(field, values) {
   if (!field || !field.condition || !field.condition.fieldId) return true;
@@ -90,12 +352,45 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
   const [formConfig, setFormConfig] = useState(overrideConfig);
   const [loadingConfig, setLoadingConfig] = useState(!overrideConfig);
   const [networks, setNetworks] = useState([]);
+  const [networkAvailability, setNetworkAvailability] = useState([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   // Form values stored dynamically by field ID
   const [fieldValues, setFieldValues] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [submittedBooking, setSubmittedBooking] = useState(null);
+
+  // Re-fetch network availability whenever date, time, or duration changes
+  useEffect(() => {
+    if (fieldValues.date && fieldValues.time) {
+      fetchAvailability(
+        fieldValues.date, 
+        fieldValues.time, 
+        fieldValues.durationHours, 
+        fieldValues.durationMinutes
+      );
+    }
+  }, [fieldValues.date, fieldValues.time, fieldValues.durationHours, fieldValues.durationMinutes]);
+
+  async function fetchAvailability(d, t, durH, durM) {
+    try {
+      setLoadingAvailability(true);
+      const res = await axios.get(`${API_BASE}/api/public/networks/availability`, {
+        params: {
+          date: d,
+          time: t,
+          durationHours: durH || 1,
+          durationMinutes: durM || 0
+        }
+      });
+      setNetworkAvailability(res.data || []);
+    } catch (err) {
+      console.error('Failed to load network availability:', err);
+    } finally {
+      setLoadingAvailability(false);
+    }
+  }
 
   // Sync overrideConfig if prop changes (for live admin preview)
   useEffect(() => {
@@ -444,21 +739,68 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
             }
 
             if (type === 'network_select') {
+              const availMap = {};
+              (networkAvailability || []).forEach(n => {
+                availMap[n.id] = n;
+              });
+
+              const availableNetworks = networks.filter(net => {
+                const status = availMap[net.id];
+                return status ? status.available : true;
+              });
+
+              const currentNetStatus = availMap[fieldValues.network];
+              const isCurrentNetConflict = fieldValues.network && fieldValues.network !== 'any' && currentNetStatus && !currentNetStatus.available;
+              const allBooked = networks.length > 0 && availableNetworks.length === 0;
+
               return (
                 <div key={id} className="form-group full-width">
-                  <label htmlFor={id}>{label}{required ? ' *' : ''}</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label htmlFor={id} style={{ margin: 0 }}>{label}{required ? ' *' : ''}</label>
+                    {loadingAvailability ? (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--theme-primary, #0086d6)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Loader2 size={12} className="animate-spin" /> Checking availability...
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.72rem', color: allBooked ? '#f87171' : 'var(--theme-subtext, #94a3b8)' }}>
+                        {availableNetworks.length} of {networks.length} free for this slot
+                      </span>
+                    )}
+                  </div>
+
                   <select 
                     id={id}
                     value={fieldValues.network || 'any'} 
                     onChange={e => handleInputChange('network', e.target.value)}
                   >
-                    <option value="any">Any / Auto-Assign (Recommended)</option>
-                    {networks.map(net => (
-                      <option key={net.id} value={net.id}>
-                        {net.name} {net.ssidName ? `(${net.ssidName})` : ''}
-                      </option>
-                    ))}
+                    <option value="any">
+                      Any / Auto-Assign ({availableNetworks.length} available)
+                    </option>
+                    {networks.map(net => {
+                      const avail = availMap[net.id];
+                      const isAvail = avail ? avail.available : true;
+                      return (
+                        <option key={net.id} value={net.id} disabled={!isAvail}>
+                          {net.name} {net.ssidName ? `(${net.ssidName})` : ''} {!isAvail ? `— 🔒 Unavailable (${avail?.conflictReason || 'Booked'})` : '— Available'}
+                        </option>
+                      );
+                    })}
                   </select>
+
+                  {/* Conflict / Fully Booked Alerts */}
+                  {allBooked && (
+                    <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', color: '#fca5a5', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                      <span>All networks are fully booked for this time slot. Please select a different time or date.</span>
+                    </div>
+                  )}
+
+                  {isCurrentNetConflict && !allBooked && (
+                    <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', color: '#fcd34d', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                      <span>This network is unavailable: {currentNetStatus.conflictReason}. Please choose another network or select "Any".</span>
+                    </div>
+                  )}
                 </div>
               );
             }
@@ -595,6 +937,30 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
               );
             }
 
+            if (type === 'date') {
+              return (
+                <CalendarDatePicker 
+                  key={id}
+                  value={value} 
+                  onChange={v => handleInputChange(id, v)} 
+                  label={label} 
+                  required={required} 
+                />
+              );
+            }
+
+            if (type === 'time') {
+              return (
+                <TimeSlotPicker 
+                  key={id}
+                  value={value} 
+                  onChange={v => handleInputChange(id, v)} 
+                  label={label} 
+                  required={required} 
+                />
+              );
+            }
+
             return (
               <div key={id} className="form-group full-width">
                 <label htmlFor={id}>{label}{required ? ' *' : ''}</label>
@@ -610,24 +976,56 @@ export default function PublicBookingForm({ overrideConfig = null, isPreview = f
             );
           })}
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            disabled={submitting}
-            style={{ width: '100%', height: '44px', marginTop: '8px' }}
-          >
-            {submitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                <span>Submitting Request...</span>
-              </>
-            ) : (
-              <>
-                <Send size={16} />
-                <span>{formConfig?.submitButtonText || 'Request Wi-Fi Access'}</span>
-              </>
-            )}
-          </button>
+          {(() => {
+            const requiresWifi = fieldValues.requireInternet !== undefined ? Boolean(fieldValues.requireInternet) : true;
+            const availMap = {};
+            (networkAvailability || []).forEach(n => {
+              availMap[n.id] = n;
+            });
+            const availableNetworks = networks.filter(net => {
+              const status = availMap[net.id];
+              return status ? status.available : true;
+            });
+            const currentNetStatus = availMap[fieldValues.network];
+            const isCurrentNetConflict = fieldValues.network && fieldValues.network !== 'any' && currentNetStatus && !currentNetStatus.available;
+            const allBooked = networks.length > 0 && availableNetworks.length === 0;
+            const isBlocked = requiresWifi && (allBooked || isCurrentNetConflict);
+
+            let buttonLabel = formConfig?.submitButtonText || 'Request Wi-Fi Access';
+            if (requiresWifi && allBooked) {
+              buttonLabel = 'Time Slot Unavailable — Fully Booked';
+            } else if (requiresWifi && isCurrentNetConflict) {
+              buttonLabel = 'Selected Network Unavailable';
+            }
+
+            return (
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={submitting || isBlocked}
+                style={{ 
+                  width: '100%', 
+                  height: '44px', 
+                  marginTop: '8px',
+                  opacity: isBlocked ? 0.6 : 1,
+                  cursor: isBlocked ? 'not-allowed' : 'pointer',
+                  backgroundColor: isBlocked ? 'var(--card-border, #374151)' : undefined
+                }}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Submitting Request...</span>
+                  </>
+                ) : (
+                  <>
+                    {isBlocked ? <Lock size={16} /> : <Send size={16} />}
+                    <span>{buttonLabel}</span>
+                  </>
+                )}
+              </button>
+            );
+          })()}
         </form>
 
         <div className="public-booking-footer">

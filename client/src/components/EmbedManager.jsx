@@ -176,6 +176,8 @@ export default function EmbedManager() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [assignedNetworkId, setAssignedNetworkId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [approvalAvailability, setApprovalAvailability] = useState([]);
+  const [checkingApprovalAvail, setCheckingApprovalAvail] = useState(false);
 
   // Embed copy feedback
   const [copiedCode, setCopiedCode] = useState(false);
@@ -458,29 +460,67 @@ export default function EmbedManager() {
   };
 
   // --- Queue Handlers ---
-  const handleOpenApproveModal = (booking) => {
+  const handleOpenApproveModal = async (booking) => {
     setSelectedBooking(booking);
+    setCheckingApprovalAvail(true);
+    let availList = [];
+    try {
+      const res = await axios.get(`${API_BASE}/api/public/networks/availability`, {
+        params: {
+          date: booking.date,
+          time: booking.time,
+          durationHours: booking.durationHours || 1,
+          durationMinutes: booking.durationMinutes || 0,
+          excludeBookingId: booking.id
+        }
+      });
+      availList = res.data || [];
+      setApprovalAvailability(availList);
+    } catch (err) {
+      console.error('Failed to fetch approval availability', err);
+    } finally {
+      setCheckingApprovalAvail(false);
+    }
+
     const requested = networks.find(n => n.id === booking.requestedNetworkId);
-    if (requested) {
+    const requestedAvail = availList.find(n => n.id === booking.requestedNetworkId);
+
+    // If requested network is available, select it; otherwise select first free network
+    if (requested && (!requestedAvail || requestedAvail.available)) {
       setAssignedNetworkId(requested.id);
-    } else if (networks.length > 0) {
-      setAssignedNetworkId(networks[0].id);
     } else {
-      setAssignedNetworkId('');
+      const firstFree = availList.find(n => n.available);
+      if (firstFree) {
+        setAssignedNetworkId(firstFree.id);
+      } else if (requested) {
+        setAssignedNetworkId(requested.id);
+      } else if (networks.length > 0) {
+        setAssignedNetworkId(networks[0].id);
+      } else {
+        setAssignedNetworkId('');
+      }
     }
   };
 
-  const handleApprove = async () => {
+  const handleApprove = async (force = false) => {
     if (!selectedBooking) return;
     try {
       setActionLoading(true);
       await axios.post(`${API_BASE}/api/bookings/${selectedBooking.id}/approve`, {
-        assignedNetworkId
+        assignedNetworkId,
+        force
       });
       setSelectedBooking(null);
       await fetchData();
     } catch (err) {
-      alert('Failed to approve booking: ' + (err.response?.data?.error || err.message));
+      const data = err.response?.data;
+      if (data && data.conflict) {
+        if (confirm(`Scheduling Conflict Warning:\n\n${data.error}\n\nDo you want to override and approve this booking anyway?`)) {
+          return handleApprove(true);
+        }
+      } else {
+        alert('Failed to approve booking: ' + (data?.error || err.message));
+      }
     } finally {
       setActionLoading(false);
     }
@@ -1646,19 +1686,44 @@ export default function EmbedManager() {
               {selectedBooking.requireInternet !== false ? (
                 <>
                   <div className="form-group full-width">
-                    <label htmlFor="assignedNetworkSelect">Assign Wi-Fi Network</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label htmlFor="assignedNetworkSelect" style={{ margin: 0 }}>Assign Wi-Fi Network</label>
+                      {checkingApprovalAvail && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <RefreshCw size={12} className="animate-spin" /> Checking slot availability...
+                        </span>
+                      )}
+                    </div>
                     <select 
                       id="assignedNetworkSelect"
                       value={assignedNetworkId} 
                       onChange={e => setAssignedNetworkId(e.target.value)}
                     >
-                      {networks.map(n => (
-                        <option key={n.id} value={n.id}>
-                          {n.name} {n.ssidName ? `(SSID: ${n.ssidName})` : ''}
-                        </option>
-                      ))}
+                      {networks.map(n => {
+                        const avail = approvalAvailability.find(a => a.id === n.id);
+                        const isAvail = avail ? avail.available : true;
+                        return (
+                          <option key={n.id} value={n.id}>
+                            {n.name} {n.ssidName ? `(SSID: ${n.ssidName})` : ''} {!isAvail ? `— ⚠️ Overlap: ${avail?.conflictReason || 'Busy'}` : '— ✓ Available'}
+                          </option>
+                        );
+                      })}
                     </select>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+
+                    {(() => {
+                      const avail = approvalAvailability.find(a => a.id === assignedNetworkId);
+                      if (avail && !avail.available) {
+                        return (
+                          <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', color: '#fcd34d', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                            <span><strong>Scheduling Conflict:</strong> {avail.conflictReason}. Double booking is disabled for this network.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px', display: 'block' }}>
                       The guest requested: <strong>{selectedBooking.requestedNetworkName || 'Any / Auto-Assign'}</strong>.
                     </span>
                   </div>

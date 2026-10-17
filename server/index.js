@@ -8,7 +8,8 @@ const {
   getNetworks, saveNetworks, 
   getEvents, saveEvents, deleteNetwork,
   getBookings, saveBookings, addBooking, updateBooking, deleteBooking,
-  getFormConfig, saveFormConfig
+  getFormConfig, saveFormConfig,
+  checkNetworkAvailability, getNetworksAvailability
 } = require('./db');
 const { startScheduler, restartScheduler, rotatePasswords } = require('./scheduler');
 const { 
@@ -112,9 +113,27 @@ app.get('/api/public/networks', (req, res) => {
       .map(n => ({
         id: n.id,
         name: n.name,
-        ssidName: n.ssidName || n.name
+        ssidName: n.ssidName || n.name,
+        allowDoubleBooking: Boolean(n.allowDoubleBooking)
       }));
     res.json(publicNetworks);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Get real-time network availability for a date/time/duration slot
+app.get('/api/public/networks/availability', (req, res) => {
+  try {
+    const { date, time, durationHours, durationMinutes, excludeBookingId } = req.query;
+    const availability = getNetworksAvailability(
+      date,
+      time,
+      parseInt(durationHours, 10) || 1,
+      parseInt(durationMinutes, 10) || 0,
+      excludeBookingId || null
+    );
+    res.json(availability);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -231,6 +250,30 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
     }
 
+    const isWifi = requireInternet !== undefined ? Boolean(requireInternet) : true;
+    if (isWifi) {
+      const durHours = parseInt(durationHours, 10) || 1;
+      const durMins = parseInt(durationMinutes, 10) || 0;
+      if (requestedNetworkId && requestedNetworkId !== 'any') {
+        const check = checkNetworkAvailability(requestedNetworkId, date, time, durHours, durMins);
+        if (!check.available) {
+          return res.status(409).json({ 
+            success: false, 
+            error: check.conflictReason || 'The selected network is already booked for this date and time. Please select another network or time.' 
+          });
+        }
+      } else {
+        const availList = getNetworksAvailability(date, time, durHours, durMins);
+        const freeNets = availList.filter(n => n.available);
+        if (freeNets.length === 0) {
+          return res.status(409).json({
+            success: false,
+            error: 'All networks are fully booked for this date and time slot. Please choose another date or time.'
+          });
+        }
+      }
+    }
+
     const booking = addBooking({
       name: name.trim(),
       email: email.trim(),
@@ -266,7 +309,7 @@ app.post('/api/bookings', async (req, res) => {
 // API: Approve a booking request
 app.post('/api/bookings/:id/approve', async (req, res) => {
   try {
-    const { assignedNetworkId } = req.body;
+    const { assignedNetworkId, force } = req.body;
     const bookings = getBookings();
     const booking = bookings.find(b => b.id === req.params.id);
     if (!booking) {
@@ -298,6 +341,26 @@ app.post('/api/bookings/:id/approve', async (req, res) => {
 
     if (!targetNetwork) {
       return res.status(400).json({ success: false, error: 'No Wi-Fi networks available to assign.' });
+    }
+
+    // Safeguard against overlapping double booking unless explicitly forced
+    if (!force) {
+      const check = checkNetworkAvailability(
+        targetNetwork.id,
+        booking.date,
+        booking.time,
+        parseInt(booking.durationHours, 10) || 1,
+        parseInt(booking.durationMinutes, 10) || 0,
+        booking.id
+      );
+      if (!check.available) {
+        return res.status(409).json({
+          success: false,
+          conflict: true,
+          networkName: targetNetwork.name,
+          error: check.conflictReason || 'This network has an overlapping booking or scheduled event.'
+        });
+      }
     }
 
     // Update booking state

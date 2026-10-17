@@ -39,6 +39,7 @@ export default function Networks() {
         vlanId: '',
         ssidName: '',
         currentPassword: '',
+        allowDoubleBooking: false,
         passwordPolicy: {
           type: 'passphrase',
           wordCount: 3,
@@ -274,6 +275,34 @@ export default function Networks() {
                         id={`hidden-${net.id}`}
                         checked={net.isHidden || false}
                         onChange={(e) => handleChange(net.id, 'isHidden', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div className="form-group full-width" style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '12px 16px', 
+                    backgroundColor: 'rgba(255,255,255,0.02)', 
+                    borderRadius: 'var(--radius-sm)', 
+                    border: '1px solid var(--card-border)' 
+                  }}>
+                    <div>
+                      <label htmlFor={`double-booking-${net.id}`} style={{ margin: 0, fontWeight: '500', cursor: 'pointer', display: 'block' }}>
+                        Allow Concurrent Bookings (Double Scheduling)
+                      </label>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                        When disabled, this network locks exclusively during approved booking slots and scheduled events.
+                      </span>
+                    </div>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        id={`double-booking-${net.id}`}
+                        checked={Boolean(net.allowDoubleBooking)}
+                        onChange={(e) => handleChange(net.id, 'allowDoubleBooking', e.target.checked)}
                       />
                       <span className="toggle-slider"></span>
                     </label>

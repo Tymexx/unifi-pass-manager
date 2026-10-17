@@ -30,6 +30,7 @@ const defaultData = {
       vlanId: '',
       ssidName: 'GuestNetwork',
       currentPassword: 'supersecretpassword123',
+      allowDoubleBooking: false,
       passwordPolicy: {
         type: 'passphrase',
         wordCount: 3,
@@ -157,6 +158,11 @@ function readDb() {
             numbers: true,
             symbols: false
           };
+          mutated = true;
+        }
+
+        if (net.allowDoubleBooking === undefined) {
+          net.allowDoubleBooking = false;
           mutated = true;
         }
       });
@@ -351,6 +357,131 @@ function saveFormConfig(config) {
   return data.formConfig;
 }
 
+function checkNetworkAvailability(networkId, date, time, durationHours, durationMinutes, excludeBookingId = null) {
+  const data = readDb();
+  const net = (data.networks || []).find(n => n.id === networkId);
+  if (!net) {
+    return { available: false, conflictReason: 'Network not found.' };
+  }
+  if (net.enabled === false) {
+    return { available: false, conflictReason: 'Network is disabled.' };
+  }
+  // If double booking is explicitly allowed, this network can always take bookings
+  if (net.allowDoubleBooking === true) {
+    return { available: true, conflictReason: null };
+  }
+
+  if (!date || !time) {
+    return { available: true, conflictReason: null };
+  }
+
+  // Parse requested time window
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, min] = time.split(':').map(Number);
+  const reqStart = new Date(year, month - 1, day, hour, min, 0).getTime();
+  const totalDurationMs = ((parseInt(durationHours, 10) || 1) * 60 + (parseInt(durationMinutes, 10) || 0)) * 60 * 1000;
+  const reqEnd = reqStart + (totalDurationMs > 0 ? totalDurationMs : 3600000);
+
+  // 1. Check approved bookings on this network
+  const bookings = data.bookings || [];
+  for (const b of bookings) {
+    if (b.id === excludeBookingId) continue;
+    if (b.status === 'approved' && b.assignedNetworkId === networkId && b.date && b.time) {
+      const [bY, bM, bD] = b.date.split('-').map(Number);
+      const [bH, bMin] = b.time.split(':').map(Number);
+      const bStart = new Date(bY, bM - 1, bD, bH, bMin, 0).getTime();
+      const bDurMs = ((parseInt(b.durationHours, 10) || 1) * 60 + (parseInt(b.durationMinutes, 10) || 0)) * 60 * 1000;
+      const bEnd = bStart + (bDurMs > 0 ? bDurMs : 3600000);
+
+      if (reqStart < bEnd && reqEnd > bStart) {
+        const formatTime = (t) => (t || '').slice(0, 5);
+        const formatEndTime = (startMs, durMs) => {
+          const eDate = new Date(startMs + durMs);
+          const hh = String(eDate.getHours()).padStart(2, '0');
+          const mm = String(eDate.getMinutes()).padStart(2, '0');
+          return `${hh}:${mm}`;
+        };
+        const endStr = formatEndTime(bStart, bDurMs > 0 ? bDurMs : 3600000);
+        return {
+          available: false,
+          conflictType: 'booking',
+          conflictReason: `Already booked (${formatTime(b.time)} - ${endStr})`,
+          conflictingBooking: { id: b.id, name: b.name, company: b.company, time: b.time, durationHours: b.durationHours }
+        };
+      }
+    }
+  }
+
+  // 2. Check scheduled calendar events on this network
+  const events = data.events || [];
+  for (const ev of events) {
+    if (ev.networkId === networkId && ev.time) {
+      if (excludeBookingId && ev.bookingId === excludeBookingId) continue;
+
+      let matchesDate = false;
+      if (ev.type === 'one-off' && ev.date === date) {
+        matchesDate = true;
+      } else if (ev.type === 'recurring') {
+        const reqDayOfWeek = new Date(year, month - 1, day).getDay(); // 0 = Sun, 1 = Mon ...
+        if (ev.recurringType === 'daily') {
+          matchesDate = true;
+        } else if (ev.recurringType === 'weekly' && String(ev.dayOfWeek) === String(reqDayOfWeek)) {
+          matchesDate = true;
+        } else if (ev.recurringType === 'monthly' && parseInt(ev.dayOfMonth, 10) === day) {
+          matchesDate = true;
+        }
+      }
+
+      if (matchesDate) {
+        const [eH, eMin] = ev.time.split(':').map(Number);
+        const eStart = new Date(year, month - 1, day, eH, eMin, 0).getTime();
+        const evDurHours = ev.revokeAccess ? (parseInt(ev.revokeHours, 10) || 1) : 2;
+        const evDurMinutes = ev.revokeAccess ? (parseInt(ev.revokeMinutes, 10) || 0) : 0;
+        const eDurMs = (evDurHours * 60 + evDurMinutes) * 60 * 1000;
+        const eEnd = eStart + (eDurMs > 0 ? eDurMs : 3600000);
+
+        if (reqStart < eEnd && reqEnd > eStart) {
+          const formatEndTime = (startMs, durMs) => {
+            const eDate = new Date(startMs + durMs);
+            const hh = String(eDate.getHours()).padStart(2, '0');
+            const mm = String(eDate.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+          };
+          const endStr = formatEndTime(eStart, eDurMs > 0 ? eDurMs : 3600000);
+          return {
+            available: false,
+            conflictType: 'event',
+            conflictReason: `Scheduled: ${ev.title || 'Event'} (${ev.time.slice(0, 5)} - ${endStr})`,
+            conflictingEvent: { id: ev.id, title: ev.title, time: ev.time }
+          };
+        }
+      }
+    }
+  }
+
+  return { available: true, conflictReason: null };
+}
+
+function getNetworksAvailability(date, time, durationHours, durationMinutes, excludeBookingId = null) {
+  const networks = getNetworks();
+  return networks
+    .filter(n => n.enabled !== false)
+    .map(net => {
+      const status = checkNetworkAvailability(net.id, date, time, durationHours, durationMinutes, excludeBookingId);
+      return {
+        id: net.id,
+        name: net.name,
+        ssidName: net.ssidName || net.name,
+        allowDoubleBooking: Boolean(net.allowDoubleBooking),
+        available: status.available,
+        conflictReason: status.conflictReason,
+        conflictType: status.conflictType,
+        conflictingBooking: status.conflictingBooking,
+        conflictingEvent: status.conflictingEvent
+      };
+    });
+}
+
 module.exports = {
   getSettings,
   saveSettings,
@@ -366,5 +497,7 @@ module.exports = {
   updateBooking,
   deleteBooking,
   getFormConfig,
-  saveFormConfig
+  saveFormConfig,
+  checkNetworkAvailability,
+  getNetworksAvailability
 };
